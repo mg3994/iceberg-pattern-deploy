@@ -1,36 +1,38 @@
 import 'dart:async';
+
 import 'package:bloc_signals_flutter/bloc_signals_flutter.dart';
 import 'package:signals_core/signals_core.dart';
-import '../data/task_repository.dart';
+
 import '../domain/task.dart';
+import '../domain/task_repository_interface.dart';
 
 /// Screen-scoped presentation state for the Task Board.
 typedef TaskBoardState = ({
-List<Task> tasks,
-String? activeFilterTag,
-String? isDeletingTaskId,
-bool hasSyncError,
+  List<Task> tasks,
+  String? activeFilterTag,
+  String? isDeletingTaskId,
+  bool hasSyncError,
 });
 
 /// The Visible Boundary: Screen-scoped facade that filters domain data,
 /// tracks ephemeral UI states (such as row-level loading spinners),
 /// and translates repository exceptions into standard BLoC error channels.
 class TaskBoardCubit extends CubitSignal<TaskBoardState> {
-  TaskBoardCubit({required TaskRepository repository})
+  TaskBoardCubit({required ITaskRepository repository})
       : _repository = repository,
         super(
-        initialState: (
-        tasks: repository.tasks.value,
-        activeFilterTag: null,
-        isDeletingTaskId: null,
-        hasSyncError: repository.hasSyncError.value,
-        ),
-        equals: _tasksStateEquals,
-      ) {
+          initialState: (
+            tasks: repository.tasks.value,
+            activeFilterTag: null,
+            isDeletingTaskId: null,
+            hasSyncError: repository.hasSyncError.value,
+          ),
+          equals: _tasksStateEquals,
+        ) {
     _initFacade();
   }
 
-  final TaskRepository _repository;
+  final ITaskRepository _repository;
   final _activeFilterTag = signal<String?>(null);
   final _isDeletingTaskId = signal<String?>(null);
   late final void Function() _disposeEffect;
@@ -45,10 +47,10 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
           : allTasks.where((t) => t.tags.contains(filter)).toList();
 
       return (
-      tasks: filteredTasks,
-      activeFilterTag: filter,
-      isDeletingTaskId: _isDeletingTaskId.value,
-      hasSyncError: _repository.hasSyncError.value,
+        tasks: filteredTasks,
+        activeFilterTag: filter,
+        isDeletingTaskId: _isDeletingTaskId.value,
+        hasSyncError: _repository.hasSyncError.value,
       );
     });
 
@@ -62,7 +64,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
   void toggleTask(String id, bool currentStatus) {
     unawaited(
       _repository.toggleTask(id, currentStatus).catchError(
-            (Object error, StackTrace st) {
+        (Object error, StackTrace st) {
           onError(error, st);
         },
       ),
@@ -89,16 +91,8 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
     if (prev.hasSyncError != curr.hasSyncError) return false;
     if (prev.tasks.length != curr.tasks.length) return false;
     for (var i = 0; i < prev.tasks.length; i++) {
-      final a = prev.tasks[i];
-      final b = curr.tasks[i];
-      if (a.id != b.id ||
-          a.title != b.title ||
-          a.isCompleted != b.isCompleted ||
-          a.tags.length != b.tags.length) {
+      if (prev.tasks[i] != curr.tasks[i]) {
         return false;
-      }
-      for (var j = 0; j < a.tags.length; j++) {
-        if (a.tags[j] != b.tags[j]) return false;
       }
     }
     return true;

@@ -14,7 +14,7 @@ class TaskBoardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocSignalListener<TaskBoardCubit, TaskBoardState>(
       listenWhen: (previous, current) =>
-      !previous.hasSyncError && current.hasSyncError,
+          !previous.hasSyncError && current.hasSyncError,
       listener: (context, state) {
         if (state.hasSyncError) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -32,23 +32,23 @@ class TaskBoardScreen extends StatelessWidget {
               title: const Text('Tasks (The Iceberg Pattern)'),
               bottom: state.hasSyncError
                   ? const PreferredSize(
-                preferredSize: Size.fromHeight(28),
-                child: ColoredBox(
-                  color: Colors.amber,
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4),
-                      child: Text(
-                        'Offline / Sync Error — Showing Cached Tasks',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                      preferredSize: Size.fromHeight(28),
+                      child: ColoredBox(
+                        color: Colors.amber,
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 4),
+                            child: Text(
+                              'Offline / Sync Error — Showing Cached Tasks',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ),
-              )
+                    )
                   : null,
             ),
             body: Column(
@@ -85,51 +85,51 @@ class TaskBoardScreen extends StatelessWidget {
                   child: state.tasks.isEmpty
                       ? const Center(child: Text('No tasks found'))
                       : ListView.builder(
-                    itemCount: state.tasks.length,
-                    itemBuilder: (context, index) {
-                      final task = state.tasks[index];
-                      final isDeleting =
-                          state.isDeletingTaskId == task.id;
+                          itemCount: state.tasks.length,
+                          itemBuilder: (context, index) {
+                            final task = state.tasks[index];
+                            final isDeleting =
+                                state.isDeletingTaskId == task.id;
 
-                      return ListTile(
-                        leading: Checkbox(
-                          value: task.isCompleted,
-                          onChanged: isDeleting
-                              ? null
-                              : (_) => context
-                              .read<TaskBoardCubit>()
-                              .toggleTask(
-                            task.id,
-                            task.isCompleted,
-                          ),
+                            return ListTile(
+                              leading: Checkbox(
+                                value: task.isCompleted,
+                                onChanged: isDeleting
+                                    ? null
+                                    : (_) => context
+                                        .read<TaskBoardCubit>()
+                                        .toggleTask(
+                                          task.id,
+                                          task.isCompleted,
+                                        ),
+                              ),
+                              title: Text(
+                                task.title,
+                                style: TextStyle(
+                                  decoration: task.isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
+                              ),
+                              subtitle: task.tags.isEmpty
+                                  ? null
+                                  : Text(task.tags.join(', ')),
+                              trailing: isDeleting
+                                  ? const SizedBox.square(
+                                      dimension: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : IconButton(
+                                      icon: const Icon(Icons.delete_outline),
+                                      onPressed: () => context
+                                          .read<TaskBoardCubit>()
+                                          .deleteTask(task.id),
+                                    ),
+                            );
+                          },
                         ),
-                        title: Text(
-                          task.title,
-                          style: TextStyle(
-                            decoration: task.isCompleted
-                                ? TextDecoration.lineThrough
-                                : null,
-                          ),
-                        ),
-                        subtitle: task.tags.isEmpty
-                            ? null
-                            : Text(task.tags.join(', ')),
-                        trailing: isDeleting
-                            ? const SizedBox.square(
-                          dimension: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
-                        )
-                            : IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () => context
-                              .read<TaskBoardCubit>()
-                              .deleteTask(task.id),
-                        ),
-                      );
-                    },
-                  ),
                 ),
               ],
             ),

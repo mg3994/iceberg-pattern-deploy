@@ -5,7 +5,7 @@ version: 1.0.0
 publish_to: none
 
 environment:
-  sdk: ^3.14.0-95.2.beta
+  sdk: ">=3.11.0 <4.0.0"
 resolution: workspace
 
 # Add regular dependencies here.

@@ -13,36 +13,13 @@
 
 include:
   - package:flutter_lints/flutter.yaml
-  - package:kaisel_lint/recommended.yaml
+
 analyzer:
   exclude:
     - build/**
     - "**/build/**"
     - "**/generated/**"
 
-# Uncomment the following section to specify additional rules.
-
-# linter:
-#   rules:
-#     - camel_case_types
 linter:
   rules:
     unnecessary_async: true
-
-# analyzer:
-#   exclude:
-#     - path/to/excluded/files/**
-
-# For more information about the core and recommended set of lints, see
-# https://dart.dev/go/core-lints
-
-# For additional information about configuring this file, see
-# https://dart.dev/tools/analysis
-
-plugins:
-  kaisel_lint:
-    version: ^0.5.1
-    diagnostics:
-      require_route_props: true
-      avoid_modal_route_on_main_stack: true
-      prefer_const_route_constructors: true # opt-in
