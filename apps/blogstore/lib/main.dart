@@ -51,14 +51,14 @@ void main() {
           isCompleted: isCompleted,
           tags: old.tags,
         );
-        mockStreamController.add(List.from(currentTasks));
+        mockStreamController.add(currentTasks);
       }
     },
     deleteCloudTask: (id) async {
       // Simulate server deletion latency
       await Future<void>.delayed(const Duration(milliseconds: 800));
       currentTasks.removeWhere((t) => t.id == id);
-      mockStreamController.add(List.from(currentTasks));
+      mockStreamController.add(currentTasks);
     },
   );
 
