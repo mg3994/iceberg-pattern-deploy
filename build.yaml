@@ -1,0 +1,36 @@
+
+# /build.yaml (Workspace Root)
+
+targets:
+  $default:
+    sources:
+#      - "apps/**"
+#      - "packages/**"
+#      - "tools/**"
+#      - pubspec.yaml
+      - $package$
+      - lib/$lib$
+      - tools/drift_worker.dart
+    # Exclude generated/build output
+      - "!build/**"
+      - "!**/build/**"
+      - "!**/generated/**"
+    builders:
+      build_web_compilers:entrypoint:
+        generate_for:
+          - tools/drift_worker.dart
+        options:
+          compiler: dart2js
+      # Expose the private compiler output as a source file Flutter can ship.
+      ":copy_compiled_worker_js":
+        enabled: true
+
+builders:
+  copy_compiled_worker_js:
+    import: "tools/builder.dart"
+    builder_factories: ["CopyCompiledJs.new"]
+    required_inputs:
+      - .js
+    build_to: source
+    build_extensions:
+      "tools/drift_worker.dart": ["apps/blogstore/web/drift_worker.js"]

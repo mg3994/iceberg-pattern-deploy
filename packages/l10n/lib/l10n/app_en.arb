@@ -1,0 +1,11 @@
+{
+  "@@locale": "en",
+  "languageName": "English",
+  "@languageName": {
+    "description": "Native display name of the language"
+  },
+  "appName": "BlogStore",
+  "@appName": {
+    "description": "The name of the application"
+  }
+}

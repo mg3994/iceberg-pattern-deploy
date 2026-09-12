@@ -1,0 +1,24 @@
+targets:
+  $default:
+    sources:
+      - lib/**
+      - pubspec.yaml
+#  the package's library entrypoint (lib/<package_name>.dart), not the whole lib/ tree.#      -
+#      - lib/$lib$
+      - $package$
+ # Exclude generated/build output
+      - "!build/**"
+      
+
+    builders:
+      drift_dev:
+        options:
+          databases:
+            default: lib/src/database/drift/app_database.dart
+
+          sql:
+            dialect: sqlite
+            options:
+              version: "3.38"
+              modules:
+                - fts5

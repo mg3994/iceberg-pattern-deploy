@@ -1,0 +1,31 @@
+name: workspace
+description: A worksapce for apps.
+publish_to: none
+version: 1.0.0
+# repository: https://github.com/my_org/my_repo
+
+environment:
+  sdk: ^3.14.0-95.2.beta
+
+workspace:
+  - apps/blogstore
+  - packages/**
+
+# Add regular dependencies here.
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  build: ^4.0.7
+  build_runner: ^2.15.1
+  build_web_compilers: ^4.8.5
+  drift: ^2.35.0
+  flutter_lints: ^6.0.0
+  kaisel_lint: ^0.5.1
+
+
+
+# Localization generation is configured by the workspace-level l10n.yaml.
+flutter:
+  generate: true
