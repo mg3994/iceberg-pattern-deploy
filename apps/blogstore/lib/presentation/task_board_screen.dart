@@ -5,7 +5,7 @@ import '../application/task_board_cubit.dart';
 
 /// Presentation Layer: Pure synchronous projection (UI = ƒ(State))
 /// with zero stream subscriptions, non-blocking sync error banner,
-/// and snackbar alerts via standard BlocSignalListener.
+/// and snack bar alerts via standard BlocSignalListener.
 class TaskBoardScreen extends StatelessWidget {
   /// Creates a [TaskBoardScreen].
   const TaskBoardScreen({super.key});
