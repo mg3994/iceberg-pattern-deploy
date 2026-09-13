@@ -1,6 +1,7 @@
 import 'package:blogstore/application/task_board_cubit.dart';
 import 'package:blogstore/domain/task.dart';
 import 'package:blogstore/domain/task_repository_interface.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:signals_core/signals_core.dart';
 
@@ -8,10 +9,10 @@ class MockTaskRepository implements ITaskRepository {
   MockTaskRepository({
     List<Task> initialTasks = const [],
     bool initialSyncError = false,
-  })  : _tasksSignal = signal(initialTasks),
+  })  : _tasksSignal = signal(initialTasks.toIList()),
         _hasSyncErrorSignal = signal(initialSyncError);
 
-  final Signal<List<Task>> _tasksSignal;
+  final Signal<IList<Task>> _tasksSignal;
   final Signal<bool> _hasSyncErrorSignal;
 
   bool toggleCalled = false;
@@ -19,7 +20,7 @@ class MockTaskRepository implements ITaskRepository {
   Object? toggleErrorToThrow;
 
   @override
-  ReadonlySignal<List<Task>> get tasks => _tasksSignal;
+  ReadonlySignal<IList<Task>> get tasks => _tasksSignal;
 
   @override
   ReadonlySignal<bool> get hasSyncError => _hasSyncErrorSignal;
@@ -33,8 +34,14 @@ class MockTaskRepository implements ITaskRepository {
     final idx = _tasksSignal.value.indexWhere((t) => t.id == id);
     if (idx != -1) {
       final updated = List<Task>.from(_tasksSignal.value);
-      updated[idx] = updated[idx].copyWith(isCompleted: !currentStatus);
-      _tasksSignal.value = updated;
+      final old = updated[idx];
+      updated[idx] = (
+        id: old.id,
+        title: old.title,
+        isCompleted: !currentStatus,
+        tags: old.tags,
+      );
+      _tasksSignal.value = updated.toIList();
     }
   }
 
@@ -42,7 +49,7 @@ class MockTaskRepository implements ITaskRepository {
   Future<void> deleteTask(String id) async {
     deleteCalled = true;
     final updated = List<Task>.from(_tasksSignal.value)..removeWhere((t) => t.id == id);
-    _tasksSignal.value = updated;
+    _tasksSignal.value = updated.toIList();
   }
 
   @override
@@ -57,9 +64,9 @@ void main() {
     late MockTaskRepository repository;
     late TaskBoardCubit cubit;
 
-    final testTasks = [
-      const Task(id: '1', title: 'Work task', isCompleted: false, tags: ['work']),
-      const Task(id: '2', title: 'Personal task', isCompleted: true, tags: ['personal']),
+    final testTasks = <Task>[
+      (id: '1', title: 'Work task', isCompleted: false, tags: ['work'].toIList()),
+      (id: '2', title: 'Personal task', isCompleted: true, tags: ['personal'].toIList()),
     ];
 
     setUp(() {
@@ -73,7 +80,7 @@ void main() {
     });
 
     test('initialState reflects repository values', () {
-      expect(cubit.state.value.tasks, equals(testTasks));
+      expect(cubit.state.value.tasks, equals(testTasks.toIList()));
       expect(cubit.state.value.activeFilterTag, isNull);
       expect(cubit.state.value.isDeletingTaskId, isNull);
       expect(cubit.state.value.hasSyncError, isFalse);

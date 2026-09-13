@@ -1,3 +1,4 @@
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:signals_core/signals_core.dart';
 import 'sync_rollback_exception.dart';
 
@@ -20,31 +21,31 @@ abstract class IcebergRepository<T, ID> {
   final Set<ID> _inFlightIds = {};
 
   // Private Reactive Graph
-  late final StreamSignal<List<T>> _streamSignal;
+  late final StreamSignal<List<T>> _cloudStreamSignal;
   final _optimisticPatches = signal<Map<ID, T>>({});
   final _hasSyncError = signal<bool>(false);
-  late final Computed<List<T>> _computedItems;
+  late final Computed<IList<T>> _computedItems;
 
   void _initEngine(Stream<List<T>> cloudSnapshotStream, List<T> initialItems) {
-    _streamSignal = streamSignal(
+    _cloudStreamSignal = streamSignal(
       () => cloudSnapshotStream,
       options: AsyncSignalOptions<List<T>>(initialValue: initialItems),
     );
 
     _computedItems = computed(() {
-      final baseItems = _streamSignal.value.value ?? const [];
+      final baseItems = _cloudStreamSignal.value.value ?? const [];
       final overrides = _optimisticPatches.value;
-      if (overrides.isEmpty) return baseItems;
+      if (overrides.isEmpty) return baseItems.toIList();
 
       return baseItems.map((item) {
         final override = overrides[getId(item)];
         return override ?? item;
-      }).toList();
+      }).toIList();
     });
   }
 
-  /// Public Readonly Boundary for domain items
-  ReadonlySignal<List<T>> get items => _computedItems;
+  /// Public Readonly Boundary for domain items as fast_immutable_collections [IList]
+  ReadonlySignal<IList<T>> get items => _computedItems;
 
   /// Public Readonly Boundary for sync error banner flag
   ReadonlySignal<bool> get hasSyncError => _hasSyncError;
@@ -101,7 +102,7 @@ abstract class IcebergRepository<T, ID> {
   /// Disposes internal reactive signals.
   void dispose() {
     _inFlightIds.clear();
-    _streamSignal.dispose();
+    _cloudStreamSignal.dispose();
     _optimisticPatches.dispose();
     _hasSyncError.dispose();
     _computedItems.dispose();

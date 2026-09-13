@@ -3,6 +3,7 @@ import 'package:blogstore/application/task_board_cubit.dart';
 import 'package:blogstore/domain/task.dart';
 import 'package:blogstore/domain/task_repository_interface.dart';
 import 'package:blogstore/presentation/task_board_screen.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:signals_core/signals_core.dart';
@@ -11,16 +12,16 @@ class MockTaskRepository implements ITaskRepository {
   MockTaskRepository({
     required List<Task> tasks,
     bool hasSyncError = false,
-  })  : _tasks = signal(tasks),
+  })  : _tasks = signal(tasks.toIList()),
         _syncError = signal(hasSyncError);
 
-  final Signal<List<Task>> _tasks;
+  final Signal<IList<Task>> _tasks;
   final Signal<bool> _syncError;
 
   bool toggleCalled = false;
 
   @override
-  ReadonlySignal<List<Task>> get tasks => _tasks;
+  ReadonlySignal<IList<Task>> get tasks => _tasks;
 
   @override
   ReadonlySignal<bool> get hasSyncError => _syncError;
@@ -44,9 +45,9 @@ void main() {
   group('TaskBoardScreen Widget Tests', () {
     late MockTaskRepository repository;
 
-    final sampleTasks = [
-      const Task(id: '1', title: 'First Task', isCompleted: false, tags: ['work']),
-      const Task(id: '2', title: 'Second Task', isCompleted: true, tags: ['personal']),
+    final sampleTasks = <Task>[
+      (id: '1', title: 'First Task', isCompleted: false, tags: ['work'].toIList()),
+      (id: '2', title: 'Second Task', isCompleted: true, tags: ['personal'].toIList()),
     ];
 
     setUp(() {

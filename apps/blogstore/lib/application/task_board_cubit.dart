@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bloc_signals_flutter/bloc_signals_flutter.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:signals_core/signals_core.dart';
 
 import '../domain/task.dart';
@@ -8,7 +9,7 @@ import '../domain/task_repository_interface.dart';
 
 /// Screen-scoped presentation state for the Task Board.
 typedef TaskBoardState = ({
-  List<Task> tasks,
+  IList<Task> tasks,
   String? activeFilterTag,
   String? isDeletingTaskId,
   bool hasSyncError,
@@ -44,7 +45,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
 
       final filteredTasks = filter == null
           ? allTasks
-          : allTasks.where((t) => t.tags.contains(filter)).toList();
+          : allTasks.where((t) => t.tags.contains(filter)).toIList();
 
       return (
         tasks: filteredTasks,
@@ -89,12 +90,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
     if (prev.activeFilterTag != curr.activeFilterTag) return false;
     if (prev.isDeletingTaskId != curr.isDeletingTaskId) return false;
     if (prev.hasSyncError != curr.hasSyncError) return false;
-    if (prev.tasks.length != curr.tasks.length) return false;
-    for (var i = 0; i < prev.tasks.length; i++) {
-      if (prev.tasks[i] != curr.tasks[i]) {
-        return false;
-      }
-    }
+    if (prev.tasks != curr.tasks) return false;
     return true;
   }
 

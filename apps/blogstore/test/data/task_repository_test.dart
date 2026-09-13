@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:blogstore/data/task_repository.dart';
 import 'package:blogstore/domain/task.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -13,8 +14,8 @@ void main() {
     setUp(() {
       streamController = StreamController<List<Task>>.broadcast();
       remoteTasks = [
-        const Task(id: '1', title: 'Task 1', isCompleted: false, tags: ['work']),
-        const Task(id: '2', title: 'Task 2', isCompleted: true, tags: ['home']),
+        (id: '1', title: 'Task 1', isCompleted: false, tags: ['work'].toIList()),
+        (id: '2', title: 'Task 2', isCompleted: true, tags: ['home'].toIList()),
       ];
 
       repository = TaskRepository(
@@ -26,7 +27,13 @@ void main() {
           }
           final idx = remoteTasks.indexWhere((t) => t.id == id);
           if (idx != -1) {
-            remoteTasks[idx] = remoteTasks[idx].copyWith(isCompleted: isCompleted);
+            final old = remoteTasks[idx];
+            remoteTasks[idx] = (
+              id: old.id,
+              title: old.title,
+              isCompleted: isCompleted,
+              tags: old.tags,
+            );
             streamController.add(List.from(remoteTasks));
           }
         },

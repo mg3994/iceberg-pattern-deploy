@@ -1,10 +1,12 @@
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:signals_core/signals_core.dart';
+
 import 'task.dart';
 
 /// Clean Domain Repository Interface adhering to the Dependency Inversion Principle (DIP).
 abstract class ITaskRepository {
   /// Readonly signal of current task snapshot list
-  ReadonlySignal<List<Task>> get tasks;
+  ReadonlySignal<IList<Task>> get tasks;
 
   /// Readonly signal indicating if a sync/network error occurred during background reconciliation
   ReadonlySignal<bool> get hasSyncError;

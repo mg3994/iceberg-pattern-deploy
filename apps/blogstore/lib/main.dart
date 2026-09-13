@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bloc_signals_flutter/bloc_signals_flutter.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
 
 import 'application/task_board_cubit.dart';
@@ -13,23 +14,23 @@ void main() {
   final mockStreamController = StreamController<List<Task>>.broadcast();
 
   final currentTasks = <Task>[
-    const Task(
+    (
       id: '1',
       title: 'Draft Iceberg Pattern architecture article',
       isCompleted: true,
-      tags: ['work', 'writing'],
+      tags: ['work', 'writing'].toIList(),
     ),
-    const Task(
+    (
       id: '2',
       title: 'Review PR feedback on BlocSignal ecosystem',
       isCompleted: false,
-      tags: ['work'],
+      tags: ['work'].toIList(),
     ),
-    const Task(
+    (
       id: '3',
       title: 'Grocery shopping & farmers market (Fails Sync)',
       isCompleted: false,
-      tags: ['personal'],
+      tags: ['personal'].toIList(),
     ),
   ];
 
@@ -48,7 +49,12 @@ void main() {
       final index = currentTasks.indexWhere((t) => t.id == id);
       if (index != -1) {
         final old = currentTasks[index];
-        currentTasks[index] = old.copyWith(isCompleted: isCompleted);
+        currentTasks[index] = (
+          id: old.id,
+          title: old.title,
+          isCompleted: isCompleted,
+          tags: old.tags,
+        );
         mockStreamController.add(List.from(currentTasks));
       }
     },

@@ -1,14 +1,15 @@
 import 'dart:async';
 
 import 'package:core/core.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:signals_core/signals_core.dart';
 
 import '../domain/task.dart';
 import '../domain/task_repository_interface.dart';
 
 /// Data Layer: Concrete Submerged Engine for Task entity.
-/// Inherits generic reactive graph stream caching, optimistic patch overrides,
-/// atomic batch rollbacks, and deduplication from [IcebergRepository].
+/// Inherits generic reactive graph stream caching (via streamSignal( cloudStream ) and computed( merging )),
+/// optimistic patch overrides, atomic batch rollbacks, and deduplication from [IcebergRepository].
 class TaskRepository extends IcebergRepository<Task, String>
     implements ITaskRepository {
   TaskRepository({
@@ -27,7 +28,7 @@ class TaskRepository extends IcebergRepository<Task, String>
   final Future<void> Function(String id) _deleteCloudTask;
 
   @override
-  ReadonlySignal<List<Task>> get tasks => items;
+  ReadonlySignal<IList<Task>> get tasks => items;
 
   @override
   Future<void> toggleTask(String id, bool currentStatus) async {
@@ -37,7 +38,12 @@ class TaskRepository extends IcebergRepository<Task, String>
 
     final targetTask = currentTasks[taskIndex];
     final newStatus = !currentStatus;
-    final optimisticTask = targetTask.copyWith(isCompleted: newStatus);
+    final optimisticTask = (
+      id: targetTask.id,
+      title: targetTask.title,
+      isCompleted: newStatus,
+      tags: targetTask.tags,
+    );
 
     await executeOptimisticMutation(
       id: id,
