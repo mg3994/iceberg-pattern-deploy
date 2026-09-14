@@ -1,5 +1,7 @@
-import '../../domain/entities/store_product.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
+
 import '../../domain/entities/service_area.dart';
+import '../../domain/entities/store_product.dart';
 
 final class StoreProductModel {
   const StoreProductModel({
@@ -24,15 +26,15 @@ final class StoreProductModel {
   final List<ServiceArea> serviceAreas;
   final DateTime? publishedAt;
 
-  StoreProduct toEntity() => StoreProduct(
-    id: id,
-    name: name,
-    description: description,
-    imageUrl: imageUrl,
-    price: price,
-    currency: currency,
-    sourceUrl: sourceUrl,
-    serviceAreas: serviceAreas,
-    publishedAt: publishedAt,
-  );
+  StoreProduct toEntity() => (
+        id: id,
+        name: name,
+        description: description,
+        imageUrl: imageUrl,
+        price: price,
+        currency: currency,
+        sourceUrl: sourceUrl,
+        serviceAreas: serviceAreas.toIList(),
+        publishedAt: publishedAt,
+      );
 }

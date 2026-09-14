@@ -1,25 +1,16 @@
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
+
 import 'service_area.dart';
 
-final class StoreProduct {
-  const StoreProduct({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.imageUrl,
-    required this.price,
-    required this.currency,
-    required this.sourceUrl,
-    required this.serviceAreas,
-    this.publishedAt,
-  });
-
-  final String id;
-  final String name;
-  final String description;
-  final String? imageUrl;
-  final double? price;
-  final String? currency;
-  final String sourceUrl;
-  final List<ServiceArea> serviceAreas;
-  final DateTime? publishedAt;
-}
+/// Pure Dart 3 Record Typedef representation of StoreProduct entity.
+typedef StoreProduct = ({
+  String id,
+  String name,
+  String description,
+  String? imageUrl,
+  double? price,
+  String? currency,
+  String sourceUrl,
+  IList<ServiceArea> serviceAreas,
+  DateTime? publishedAt,
+});
