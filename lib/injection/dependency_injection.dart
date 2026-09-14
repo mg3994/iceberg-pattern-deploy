@@ -1,4 +1,3 @@
-import 'package:blogstore/features/settings/app_setting/domain/usecases/reset_app_settings.dart';
 import 'package:firebase_analytics/firebase_analytics.dart'
     show FirebaseAnalytics;
 import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
@@ -23,16 +22,6 @@ import '../features/settings/app_setting/data/repositories/app_setting_repositor
     show AppSettingRepositoryImpl;
 import '../features/settings/app_setting/domain/repositories/app_setting_repository.dart'
     show AppSettingRepository;
-import '../features/settings/app_setting/domain/usecases/get_app_settings.dart';
-import '../features/settings/app_setting/domain/usecases/temp_change_locale.dart';
-import '../features/settings/app_setting/domain/usecases/temp_change_seed_color.dart';
-import '../features/settings/app_setting/domain/usecases/temp_change_theme_mode.dart';
-import '../features/settings/app_setting/domain/usecases/update_consent.dart';
-import '../features/settings/app_setting/domain/usecases/update_locale.dart';
-import '../features/settings/app_setting/domain/usecases/update_onboarding_completed.dart';
-import '../features/settings/app_setting/domain/usecases/update_seed_color.dart';
-import '../features/settings/app_setting/domain/usecases/update_theme_mode.dart';
-import '../features/settings/app_setting/domain/usecases/watch_app_settings.dart';
 import '../features/settings/app_setting/presentation/bloc/app_setting_bloc.dart'
     show AppSettingBloc;
 import '../firebase_web_config.dart' show FirebaseWebConfig;
@@ -71,7 +60,6 @@ final class Dependencies {
   final AppSettingLocalDataSource appSettingLocalDataSource;
 
   // Lazily initialized post-Firebase setup
-  //==>
   late final AccessTokenProvider accessTokenProvider =
       FirebaseAccessTokenProvider(FirebaseAuth.instance);
 
@@ -93,61 +81,16 @@ final class Dependencies {
   );
 
   late final LocationService locationService = GeolocatorLocationService();
-  //<==
-  ///
+
   late final AppSettingRepository appSettingRepository =
       AppSettingRepositoryImpl(
         localDataSource: appSettingLocalDataSource,
         analyticsGateway: analyticsGateway,
       );
 
-  late final GetAppSettingsUseCase getAppSettings = GetAppSettingsUseCase(
-    appSettingRepository,
-  );
-  late final WatchAppSettingsUseCase watchAppSettings = WatchAppSettingsUseCase(
-    appSettingRepository,
-  );
-  late final ResetAppSettingsUseCase resetAppSettings = ResetAppSettingsUseCase(
-    appSettingRepository,
-  );
-  late final UpdateThemeModeUseCase updateThemeMode = UpdateThemeModeUseCase(
-    appSettingRepository,
-  );
-  late final UpdateLocaleUseCase updateLocale = UpdateLocaleUseCase(
-    appSettingRepository,
-  );
-  late final UpdateSeedColorUseCase updateSeedColor = UpdateSeedColorUseCase(
-    appSettingRepository,
-  );
-  late final UpdateOnboardingCompletedUseCase updateOnboardingCompleted =
-      UpdateOnboardingCompletedUseCase(appSettingRepository);
-  late final UpdateConsentUseCase updateConsent = UpdateConsentUseCase(
-    appSettingRepository,
-  );
-  //temp
-  late final TemporarilyChangeThemeModeUseCase tempChangeThemeMode =
-      TemporarilyChangeThemeModeUseCase(appSettingRepository);
-  late final TemporarilyChangeLocaleUseCase tempChangeLocale =
-      TemporarilyChangeLocaleUseCase(appSettingRepository);
-  late final TemporarilyChangeSeedColorUseCase tempChangeSeedColor =
-      TemporarilyChangeSeedColorUseCase(appSettingRepository);
-  //\temp
-
-  ///
-  // Lazy singleton - instantiated on first read in BootStrap
-  //  why we do DI like this as We want to avid multiple Factory instances
-  // for same Bloc
+  /// Lazy singleton - instantiated on first read in BootStrap
   late final AppSettingBloc appSettingBloc = AppSettingBloc(
-    getAppSettings: getAppSettings,
-    resetAppSettings: resetAppSettings,
-    updateThemeMode: updateThemeMode,
-    updateLocale: updateLocale,
-    updateSeedColor: updateSeedColor,
-    updateOnboardingCompleted: updateOnboardingCompleted,
-    updateConsent: updateConsent,
-    tempChangeThemeMode: tempChangeThemeMode,
-    tempChangeLocale: tempChangeLocale,
-    tempChangeSeedColor: tempChangeSeedColor,
+    repository: appSettingRepository,
     crashReporter: crashReporter,
   );
 

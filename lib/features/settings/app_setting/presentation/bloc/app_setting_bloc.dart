@@ -6,61 +6,36 @@ import 'package:material_ui/material_ui.dart'
 
 import '../../../../../config/app_config.dart' show AppConfig;
 import '../../../../../core/monitoring/crash_reporter.dart' show CrashReporter;
-import '../../domain/usecases/get_app_settings.dart';
-import '../../domain/usecases/reset_app_settings.dart'
-    show ResetAppSettingsUseCase;
-import '../../domain/usecases/temp_change_locale.dart';
-import '../../domain/usecases/temp_change_seed_color.dart';
-import '../../domain/usecases/temp_change_theme_mode.dart';
-import '../../domain/usecases/update_consent.dart' show UpdateConsentUseCase;
-import '../../domain/usecases/update_locale.dart';
-import '../../domain/usecases/update_onboarding_completed.dart'
-    show UpdateOnboardingCompletedUseCase;
-import '../../domain/usecases/update_seed_color.dart';
-import '../../domain/usecases/update_theme_mode.dart';
+import '../../domain/repositories/app_setting_repository.dart'
+    show AppSettingRepository;
 
 part 'app_setting_event.dart';
 part 'app_setting_state.dart';
 
+/// Application Facade for App Settings adhering to the Iceberg Pattern:
+/// Interacts directly with [AppSettingRepository] without pass-through interactors.
 class AppSettingBloc extends BlocSignal<AppSettingEvent, AppSettingState> {
   AppSettingBloc({
-    required this._getAppSettings,
-    required this._resetAppSettings,
-    required this._updateThemeMode,
-    required this._updateLocale,
-    required this._updateSeedColor,
-    required this._updateOnboardingCompleted,
-    required this._updateConsent,
-    required this._tempChangeThemeMode,
-    required this._tempChangeLocale,
-    required this._tempChangeSeedColor,
-    this._crashReporter,
-  }) : super(
-         initialState: const AppSettingState(
-           themeMode: AppConfig.defaultThemeMode,
-           locale: AppConfig.defaultLocale,
-           seedColor: Colors.indigo,
-         ),
-       );
+    required AppSettingRepository repository,
+    CrashReporter? crashReporter,
+  })  : _repository = repository,
+        _crashReporter = crashReporter,
+        super(
+          initialState: const AppSettingState(
+            themeMode: AppConfig.defaultThemeMode,
+            locale: AppConfig.defaultLocale,
+            seedColor: Colors.indigo,
+          ),
+        );
 
-  final GetAppSettingsUseCase _getAppSettings;
-  final ResetAppSettingsUseCase _resetAppSettings;
-  final UpdateThemeModeUseCase _updateThemeMode;
-  final UpdateLocaleUseCase _updateLocale;
-  final UpdateSeedColorUseCase _updateSeedColor;
-  final UpdateOnboardingCompletedUseCase _updateOnboardingCompleted;
-  final UpdateConsentUseCase _updateConsent;
+  final AppSettingRepository _repository;
   final CrashReporter? _crashReporter;
-  //
-  final TemporarilyChangeThemeModeUseCase _tempChangeThemeMode;
-  final TemporarilyChangeLocaleUseCase _tempChangeLocale;
-  final TemporarilyChangeSeedColorUseCase _tempChangeSeedColor;
 
   /// Loads saved user settings into state.
   /// Awaited in bootstrap initialization to prevent UI theme flickering.
   Future<void> loadSettings() async {
     try {
-      final setting = await _getAppSettings();
+      final setting = await _repository.getSettings();
       emit(
         AppSettingState(
           themeMode: setting.themeMode,
@@ -91,44 +66,45 @@ class AppSettingBloc extends BlocSignal<AppSettingEvent, AppSettingState> {
       case AppSettingUpdateThemeModeEvent(themeMode: final themeMode):
         if (stateValue.themeMode == themeMode) return;
         emit(stateValue.copyWith(themeMode: themeMode));
-        await _updateThemeMode(themeMode);
+        await _repository.updateThemeMode(themeMode);
+
       case AppSettingTemporarilyChangeThemeModeEvent(
         themeMode: final themeMode,
       ):
         if (stateValue.themeMode == themeMode) return;
         emit(stateValue.copyWith(themeMode: themeMode));
-        await _tempChangeThemeMode(themeMode);
+        await _repository.temporarilyChangeThemeMode(themeMode);
+
       case AppSettingUpdateLocaleEvent(locale: final locale):
         if (stateValue.locale == locale) return;
         emit(stateValue.copyWith(locale: locale));
-        await _updateLocale(locale);
+        await _repository.updateLocale(locale);
 
       case AppSettingTemporarilyChangeLocaleEvent(locale: final locale):
         if (stateValue.locale == locale) return;
         emit(stateValue.copyWith(locale: locale));
-        await _tempChangeLocale(locale);
+        await _repository.temporarilyChangeLocale(locale);
 
       case AppSettingUpdateSeedColorEvent(seedColor: final seedColor):
         if (stateValue.seedColor == seedColor) return;
         emit(stateValue.copyWith(seedColor: seedColor));
-        await _updateSeedColor(seedColor);
+        await _repository.updateSeedColor(seedColor);
 
       case AppSettingTemporarilyChangeSeedColorEvent(
         seedColor: final seedColor,
       ):
         if (stateValue.seedColor == seedColor) return;
         emit(stateValue.copyWith(seedColor: seedColor));
-        await _tempChangeSeedColor(
-          seedColor,
-        ); // all those _temp_ are just for analytics
+        await _repository.temporarilyChangeSeedColor(seedColor);
+
       case AppSettingResetToDefaultEvent():
         emit(stateValue.defaultState());
-        await _resetAppSettings();
+        await _repository.resetToDefaultAppSettings();
 
       case AppSettingOnboardingEvent(isCompleted: final isCompleted):
         if (stateValue.hasCompletedOnboarding == isCompleted) return;
         emit(stateValue.copyWith(hasCompletedOnboarding: isCompleted));
-        await _updateOnboardingCompleted(isCompleted);
+        await _repository.updateOnboardingCompleted(isCompleted);
 
       case AppSettingUpdateConsentEvent(
         hasGivenConsent: final hasGivenConsent,
@@ -170,7 +146,7 @@ class AppSettingBloc extends BlocSignal<AppSettingEvent, AppSettingState> {
             securityStorageConsentGranted: securityStorageConsentGranted,
           ),
         );
-        await _updateConsent(
+        await _repository.updateConsent(
           hasGivenConsent: hasGivenConsent,
           analyticsStorageConsentGranted: analyticsStorageConsentGranted,
           adStorageConsentGranted: adStorageConsentGranted,
