@@ -1,12 +1,10 @@
 name: core
-description: A sample command-line application.
+description: Core package
 version: 1.0.0
-# repository: https://github.com/my_org/my_repo
 resolution: workspace
 environment:
   sdk: ">=3.11.0 <4.0.0"
 
-# Add regular dependencies here.
 dependencies:
   fast_immutable_collections: ^11.2.0
   path: ^1.9.0

@@ -8,8 +8,8 @@ import '../domain/task.dart';
 import '../domain/task_repository_interface.dart';
 
 /// Data Layer: Concrete Submerged Engine for Task entity.
-/// Inherits generic reactive graph stream caching (via streamSignal( cloudStream ) and computed( merging )),
-/// optimistic patch overrides, atomic batch rollbacks, and deduplication from [IcebergRepository].
+/// Inherits generic reactive graph stream caching (via streamSignal and computed), optimistic patch overrides,
+/// atomic batch rollbacks, and deduplication from [IcebergRepository].
 class TaskRepository extends IcebergRepository<Task, String>
     implements ITaskRepository {
   TaskRepository({
