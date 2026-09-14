@@ -1,11 +1,26 @@
+<<<<<<< HEAD
 arb-dir: packages/l10n/lib/l10n
 output-dir: packages/l10n/lib/generated
+=======
+arb-dir: lib/l10n
+project-dir: ./
+output-dir: lib/generated
+>>>>>>> blogstore/latest
 template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 output-class: AppLocalizations
 nullable-getters: false
+<<<<<<< HEAD
 untranslated-messages-file: packages/l10n/lib/generated/untranslated.json
 use-escaping: false
 use-deferred-loading: true
 relax-syntax: true
 required-resource-attributes: false
+=======
+untranslated-messages-file: build/untranslated.json
+use-escaping: false
+use-deferred-loading: true
+relax-syntax: true
+required-resource-attributes: false # cheack what this does
+# synthetic-package: false
+>>>>>>> blogstore/latest

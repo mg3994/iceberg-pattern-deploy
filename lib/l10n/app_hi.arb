@@ -1,0 +1,146 @@
+{
+  "@@locale": "hi",
+  "languageName": "हिन्दी",
+  "@languageName": {
+    "description": "Native display name of the language"
+  },
+  "appName": "ब्लॉगस्टोर",
+  "@appName": {
+    "description": "The name of the application"
+  },
+  "helloWorld": "नमस्ते दुनिया!",
+  "@helloWorld": {
+    "description": "The conventional newborn programmer greeting"
+  },
+  "pronoun": "{gender, select, male{वह} female{वह} other{वे}}",
+  "@pronoun": {
+    "description": "A pronoun selected by gender",
+    "placeholders": {
+      "gender": {
+        "type": "String"
+      }
+    }
+  },
+  "welcomeUser": "पुनः स्वागत है, {userName}!",
+  "@welcomeUser": {
+    "description": "A personalized greeting for a signed-in user",
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      }
+    }
+  },
+  "postCount": "{count, plural, =0{कोई पोस्ट नहीं} =1{1 पोस्ट} other{# पोस्ट}}",
+  "@postCount": {
+    "description": "The number of posts in a catalog",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readingTime": "{minutes, plural, =0{एक मिनट से भी कम} =1{1 मिनट की पठन अवधि} other{# मिनट की पठन अवधि}}",
+  "@readingTime": {
+    "description": "The estimated reading time for a blog post",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "searchResults": "{count, plural, =0{\"{query}\" के लिए कोई परिणाम नहीं} =1{\"{query}\" के लिए 1 परिणाम} other{\"{query}\" के लिए # परिणाम}}",
+  "@searchResults": {
+    "description": "A search result summary with a nested string placeholder",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "authorRole": "{role, select, author{लेखक} editor{संपादक} admin{प्रशासक} other{सदस्य}}",
+  "@authorRole": {
+    "description": "A readable label for a user's role",
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "articlePrice": "मूल्य: {amount}",
+  "@articlePrice": {
+    "description": "A localized numeric article price",
+    "placeholders": {
+      "amount": {
+        "type": "double",
+        "format": "compactCurrency"
+      }
+    }
+  },
+  "publishedDate": "प्रकाशित {date}",
+  "@publishedDate": {
+    "description": "A blog post publication date formatted for the current locale",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "publishedTime": "प्रकाशित समय {time}",
+  "@publishedTime": {
+    "description": "A blog post publication time formatted for the current locale",
+    "placeholders": {
+      "time": {
+        "type": "DateTime",
+        "format": "jm"
+      }
+    }
+  },
+  "settingsTitle": "सेटिंग्स",
+  "@settingsTitle": {
+    "description": "Title for the settings section"
+  },
+  "searchSettings": "सेटिंग्स खोजें",
+  "@searchSettings": {
+    "description": "Placeholder text for searching settings"
+  },
+  "noSettingsFound": "कोई सेटिंग्स नहीं मिलीं",
+  "@noSettingsFound": {
+    "description": "Message displayed when search returns no matching settings"
+  },
+  "settingsGeneralTitle": "सामान्य",
+  "@settingsGeneralTitle": {
+    "description": "Title for general settings category"
+  },
+  "settingsGeneralSubtitle": "प्रोफ़ाइल, प्राथमिकतियाँ",
+  "@settingsGeneralSubtitle": {
+    "description": "Subtitle describing general settings content"
+  },
+  "settingsAppearanceTitle": "उपस्थिति",
+  "@settingsAppearanceTitle": {
+    "description": "Title for appearance settings category"
+  },
+  "settingsAppearanceSubtitle": "थीम, रंग, भाषा",
+  "@settingsAppearanceSubtitle": {
+    "description": "Subtitle describing appearance settings content"
+  },
+  "settingsNotificationsTitle": "सूचनाएं",
+  "@settingsNotificationsTitle": {
+    "description": "Title for notifications settings category"
+  },
+  "settingsNotificationsSubtitle": "अलर्ट, ध्वनियाँ",
+  "@settingsNotificationsSubtitle": {
+    "description": "Subtitle describing notifications settings content"
+  },
+  "settingsPrivacyTitle": "गोपनीयता और सुरक्षा",
+  "@settingsPrivacyTitle": {
+    "description": "Title for privacy & security settings category"
+  },
+  "settingsPrivacySubtitle": "पासवर्ड, पहुंच",
+  "@settingsPrivacySubtitle": {
+    "description": "Subtitle describing privacy & security settings content"
+  }
+}

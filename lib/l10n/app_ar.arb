@@ -1,0 +1,146 @@
+{
+  "@@locale": "ar",
+  "languageName": "العربية",
+  "@languageName": {
+    "description": "Native display name of the language"
+  },
+  "appName": "متجر المدونات",
+  "@appName": {
+    "description": "The name of the application"
+  },
+  "helloWorld": "أهلاً بالعالم!",
+  "@helloWorld": {
+    "description": "The conventional newborn programmer greeting"
+  },
+  "pronoun": "{gender, select, male{هو} female{هي} other{هم}}",
+  "@pronoun": {
+    "description": "A pronoun selected by gender",
+    "placeholders": {
+      "gender": {
+        "type": "String"
+      }
+    }
+  },
+  "welcomeUser": "مرحباً بك مجدداً، {userName}!",
+  "@welcomeUser": {
+    "description": "A personalized greeting for a signed-in user",
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      }
+    }
+  },
+  "postCount": "{count, plural, =0{لا توجد منشورات بعد} =1{منشور واحد} few{{count} منشورات} many{{count} منشوراً} other{{count} منشور}}",
+  "@postCount": {
+    "description": "The number of posts in a catalog",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readingTime": "{minutes, plural, =0{أقل من دقيقة} =1{قراءة لمدة دقيقة واحدة} few{قراءة لمدة {minutes} دقائق} many{قراءة لمدة {minutes} دقيقة} other{قراءة لمدة {minutes} دقيقة}}",
+  "@readingTime": {
+    "description": "The estimated reading time for a blog post",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "searchResults": "{count, plural, =0{لا توجد نتائج لـ \"{query}\"} =1{نتيجة واحدة لـ \"{query}\"} few{{count} نتائج لـ \"{query}\"} many{{count} نتيجة لـ \"{query}\"} other{{count} نتيجة لـ \"{query}\"}}",
+  "@searchResults": {
+    "description": "A search result summary with a nested string placeholder",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "authorRole": "{role, select, author{مؤلف} editor{محرر} admin{مسؤول} other{عضو}}",
+  "@authorRole": {
+    "description": "A readable label for a user's role",
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "articlePrice": "السعر: {amount}",
+  "@articlePrice": {
+    "description": "A localized numeric article price",
+    "placeholders": {
+      "amount": {
+        "type": "double",
+        "format": "compactCurrency"
+      }
+    }
+  },
+  "publishedDate": "نُشر في {date}",
+  "@publishedDate": {
+    "description": "A blog post publication date formatted for the current locale",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "publishedTime": "نُشر في تمام الساعة {time}",
+  "@publishedTime": {
+    "description": "A blog post publication time formatted for the current locale",
+    "placeholders": {
+      "time": {
+        "type": "DateTime",
+        "format": "jm"
+      }
+    }
+  },
+  "settingsTitle": "الإعدادات",
+  "@settingsTitle": {
+    "description": "Title for the settings section"
+  },
+  "searchSettings": "البحث في الإعدادات",
+  "@searchSettings": {
+    "description": "Placeholder text for searching settings"
+  },
+  "noSettingsFound": "لم يتم العثور على إعدادات",
+  "@noSettingsFound": {
+    "description": "Message displayed when search returns no matching settings"
+  },
+  "settingsGeneralTitle": "عام",
+  "@settingsGeneralTitle": {
+    "description": "Title for general settings category"
+  },
+  "settingsGeneralSubtitle": "الملف الشخصي، التفضيلات",
+  "@settingsGeneralSubtitle": {
+    "description": "Subtitle describing general settings content"
+  },
+  "settingsAppearanceTitle": "المظهر",
+  "@settingsAppearanceTitle": {
+    "description": "Title for appearance settings category"
+  },
+  "settingsAppearanceSubtitle": "المظهر، الألوان، اللغة",
+  "@settingsAppearanceSubtitle": {
+    "description": "Subtitle describing appearance settings content"
+  },
+  "settingsNotificationsTitle": "الإشعارات",
+  "@settingsNotificationsTitle": {
+    "description": "Title for notifications settings category"
+  },
+  "settingsNotificationsSubtitle": "التنبيهات، الأصوات",
+  "@settingsNotificationsSubtitle": {
+    "description": "Subtitle describing notifications settings content"
+  },
+  "settingsPrivacyTitle": "الخصوصية والأمان",
+  "@settingsPrivacyTitle": {
+    "description": "Title for privacy & security settings category"
+  },
+  "settingsPrivacySubtitle": "كلمات المرور، الوصول",
+  "@settingsPrivacySubtitle": {
+    "description": "Subtitle describing privacy & security settings content"
+  }
+}

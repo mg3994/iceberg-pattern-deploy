@@ -1,0 +1,146 @@
+{
+  "@@locale": "en",
+  "languageName": "English",
+  "@languageName": {
+    "description": "Native display name of the language"
+  },
+  "appName": "BlogStore",
+  "@appName": {
+    "description": "The name of the application"
+  },
+  "helloWorld": "Hello World!",
+  "@helloWorld": {
+    "description": "The conventional newborn programmer greeting"
+  },
+  "pronoun": "{gender, select, male{he} female{she} other{they}}",
+  "@pronoun": {
+    "description": "A pronoun selected by gender",
+    "placeholders": {
+      "gender": {
+        "type": "String"
+      }
+    }
+  },
+  "welcomeUser": "Welcome back, {userName}!",
+  "@welcomeUser": {
+    "description": "A personalized greeting for a signed-in user",
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      }
+    }
+  },
+  "postCount": "{count, plural, =0{No posts yet} =1{1 post} other{# posts}}",
+  "@postCount": {
+    "description": "The number of posts in a catalog",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readingTime": "{minutes, plural, =0{Less than a minute} =1{1 minute read} other{# minutes read}}",
+  "@readingTime": {
+    "description": "The estimated reading time for a blog post",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "searchResults": "{count, plural, =0{No results for \"{query}\"} =1{1 result for \"{query}\"} other{# results for \"{query}\"}}",
+  "@searchResults": {
+    "description": "A search result summary with a nested string placeholder",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "authorRole": "{role, select, author{Author} editor{Editor} admin{Administrator} other{Member}}",
+  "@authorRole": {
+    "description": "A readable label for a user's role",
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "articlePrice": "Price: {amount}",
+  "@articlePrice": {
+    "description": "A localized numeric article price",
+    "placeholders": {
+      "amount": {
+        "type": "double",
+        "format": "compactCurrency"
+      }
+    }
+  },
+  "publishedDate": "Published {date}",
+  "@publishedDate": {
+    "description": "A blog post publication date formatted for the current locale",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "publishedTime": "Published at {time}",
+  "@publishedTime": {
+    "description": "A blog post publication time formatted for the current locale",
+    "placeholders": {
+      "time": {
+        "type": "DateTime",
+        "format": "jm"
+      }
+    }
+  },
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "Title for the settings section"
+  },
+  "searchSettings": "Search settings",
+  "@searchSettings": {
+    "description": "Placeholder text for searching settings"
+  },
+  "noSettingsFound": "No settings found",
+  "@noSettingsFound": {
+    "description": "Message displayed when search returns no matching settings"
+  },
+  "settingsGeneralTitle": "General",
+  "@settingsGeneralTitle": {
+    "description": "Title for general settings category"
+  },
+  "settingsGeneralSubtitle": "Profile, preferences",
+  "@settingsGeneralSubtitle": {
+    "description": "Subtitle describing general settings content"
+  },
+  "settingsAppearanceTitle": "Appearance",
+  "@settingsAppearanceTitle": {
+    "description": "Title for appearance settings category"
+  },
+  "settingsAppearanceSubtitle": "Theme, colors, language",
+  "@settingsAppearanceSubtitle": {
+    "description": "Subtitle describing appearance settings content"
+  },
+  "settingsNotificationsTitle": "Notifications",
+  "@settingsNotificationsTitle": {
+    "description": "Title for notifications settings category"
+  },
+  "settingsNotificationsSubtitle": "Alerts, sounds",
+  "@settingsNotificationsSubtitle": {
+    "description": "Subtitle describing notifications settings content"
+  },
+  "settingsPrivacyTitle": "Privacy & Security",
+  "@settingsPrivacyTitle": {
+    "description": "Title for privacy & security settings category"
+  },
+  "settingsPrivacySubtitle": "Passwords, access",
+  "@settingsPrivacySubtitle": {
+    "description": "Subtitle describing privacy & security settings content"
+  }
+}
