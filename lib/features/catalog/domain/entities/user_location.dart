@@ -1,17 +1,9 @@
-final class UserLocation {
-  const UserLocation({
-    required this.country,
-    this.state,
-    this.city,
-    this.postalCode,
-    this.latitude,
-    this.longitude,
-  });
-
-  final String country;
-  final String? state;
-  final String? city;
-  final String? postalCode;
-  final double? latitude;
-  final double? longitude;
-}
+/// Pure Dart 3 Record Typedef representation of UserLocation entity.
+typedef UserLocation = ({
+  String country,
+  String? state,
+  String? city,
+  String? postalCode,
+  double? latitude,
+  double? longitude,
+});

@@ -93,7 +93,7 @@ final class JsonLdProductParser {
           final name = localizedValueReader
               .read(area['name'])
               .resolve(languageCode);
-          return ServiceArea(type: type, name: name);
+          return (type: type, name: name);
         })
         .where((area) => area.name.isNotEmpty)
         .toList(growable: false);

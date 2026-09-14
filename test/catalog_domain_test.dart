@@ -1,8 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:blogstore/features/catalog/domain/entities/catalog_filter.dart';
-import 'package:blogstore/features/catalog/domain/entities/service_area.dart';
-import 'package:blogstore/features/catalog/domain/entities/user_location.dart';
 import 'package:blogstore/features/catalog/domain/services/catalog_serviceability.dart';
 import 'package:blogstore/infrastructure/blogger/json_ld_product_parser.dart';
 import 'package:blogstore/infrastructure/blogger/schema_reference_resolver.dart';
@@ -53,8 +51,8 @@ void main() {
     final serviceability = const CatalogServiceability();
     expect(
       serviceability.isServiceable(
-        areas: const [ServiceArea(type: 'Country', name: 'India')],
-        location: const UserLocation(country: 'India', city: 'Gurugram'),
+        areas: const [(type: 'Country', name: 'India')],
+        location: (country: 'India', state: null, city: 'Gurugram', postalCode: null, latitude: null, longitude: null),
       ),
       isTrue,
     );

@@ -1,9 +1,11 @@
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
+
 import 'user_location.dart';
 
 final class CatalogFilter {
   const CatalogFilter({
     this.searchText = '',
-    this.labels = const [],
+    this.labels = const IListConst([]),
     this.languageCode = 'en',
     this.country,
     this.state,
@@ -13,7 +15,7 @@ final class CatalogFilter {
   });
 
   final String searchText;
-  final List<String> labels;
+  final IList<String> labels;
   final String languageCode;
   final String? country;
   final String? state;
@@ -25,7 +27,7 @@ final class CatalogFilter {
     final parsed = PowerSearchParser().parse(input);
     return CatalogFilter(
       searchText: parsed.text,
-      labels: parsed.labels,
+      labels: parsed.labels.toIList(),
       languageCode: languageCode,
     );
   }

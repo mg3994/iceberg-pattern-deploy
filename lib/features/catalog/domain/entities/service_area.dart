@@ -1,6 +1,5 @@
-final class ServiceArea {
-  const ServiceArea({required this.type, required this.name});
-
-  final String type;
-  final String name;
-}
+/// Pure Dart 3 Record Typedef representation of ServiceArea entity.
+typedef ServiceArea = ({
+  String type,
+  String name,
+});
