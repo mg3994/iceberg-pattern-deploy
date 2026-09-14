@@ -38,7 +38,7 @@ final class AppSettingLocalDataSourceImpl implements AppSettingLocalDataSource {
     )..where((t) => t.id.equals(1))).getSingleOrNull();
 
     if (setting == null) {
-      return AppSetting(
+      return (
         id: 1,
         themeMode: AppConfig.defaultThemeMode,
         languageCode: AppConfig.defaultLocale.languageCode,
@@ -55,7 +55,7 @@ final class AppSettingLocalDataSourceImpl implements AppSettingLocalDataSource {
       );
     }
 
-    return AppSetting(
+    return (
       id: setting.id,
       themeMode: setting.themeMode,
       languageCode: setting.languageCode,
@@ -81,7 +81,7 @@ final class AppSettingLocalDataSourceImpl implements AppSettingLocalDataSource {
       _db.appSettings,
     )..where((t) => t.id.equals(1))).watchSingleOrNull().map((setting) {
       if (setting == null) {
-        return AppSetting(
+        return (
           id: 1,
           themeMode: AppConfig.defaultThemeMode,
           languageCode: AppConfig.defaultLocale.languageCode,
@@ -97,7 +97,7 @@ final class AppSettingLocalDataSourceImpl implements AppSettingLocalDataSource {
           securityStorageConsentGranted: true,
         );
       }
-      return AppSetting(
+      return (
         id: setting.id,
         themeMode: setting.themeMode,
         languageCode: setting.languageCode,
