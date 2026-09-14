@@ -1,9 +1,13 @@
 import 'dart:async';
+
 import 'package:bloc_signals_flutter/bloc_signals_flutter.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
+
 import 'application/task_board_cubit.dart';
 import 'data/task_repository.dart';
 import 'domain/task.dart';
+import 'domain/task_repository_interface.dart';
 import 'presentation/task_board_screen.dart';
 
 void main() {
@@ -11,22 +15,22 @@ void main() {
 
   final currentTasks = <Task>[
     (
-    id: '1',
-    title: 'Draft Iceberg Pattern architecture article',
-    isCompleted: true,
-    tags: ['work', 'writing'],
+      id: '1',
+      title: 'Draft Iceberg Pattern architecture article',
+      isCompleted: true,
+      tags: ['work', 'writing'].toIList(),
     ),
     (
-    id: '2',
-    title: 'Review PR feedback on BlocSignal ecosystem',
-    isCompleted: false,
-    tags: ['work'],
+      id: '2',
+      title: 'Review PR feedback on BlocSignal ecosystem',
+      isCompleted: false,
+      tags: ['work'].toIList(),
     ),
     (
-    id: '3',
-    title: 'Grocery shopping & farmers market (Fails Sync)',
-    isCompleted: false,
-    tags: ['personal'],
+      id: '3',
+      title: 'Grocery shopping & farmers market (Fails Sync)',
+      isCompleted: false,
+      tags: ['personal'].toIList(),
     ),
   ];
 
@@ -51,14 +55,14 @@ void main() {
           isCompleted: isCompleted,
           tags: old.tags,
         );
-        mockStreamController.add(currentTasks);
+        mockStreamController.add(List.from(currentTasks));
       }
     },
     deleteCloudTask: (id) async {
       // Simulate server deletion latency
       await Future<void>.delayed(const Duration(milliseconds: 800));
       currentTasks.removeWhere((t) => t.id == id);
-      mockStreamController.add(currentTasks);
+      mockStreamController.add(List.from(currentTasks));
     },
   );
 
@@ -76,7 +80,7 @@ class IcebergPatternApp extends StatelessWidget {
     super.key,
   });
 
-  final TaskRepository repository;
+  final ITaskRepository repository;
 
   @override
   Widget build(BuildContext context) {

@@ -4,7 +4,7 @@ version: 1.0.0
 # repository: https://github.com/my_org/my_repo
 
 environment:
-  sdk: ^3.14.0-95.2.beta
+  sdk: ">=3.11.0 <4.0.0"
 resolution: workspace
 
 # Add regular dependencies here.
@@ -14,5 +14,5 @@ dependencies:
   
 
 dev_dependencies:
-  drift_dev: ^2.35.0
+  drift_dev: ^2.20.0
   
