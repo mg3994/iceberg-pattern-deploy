@@ -1,7 +1,2 @@
-// domain/task.dart
-typedef Task = ({
-String id,
-String title,
-bool isCompleted,
-List<String> tags,
-});
+// Refactored to package:tasks/tasks.dart
+export 'package:tasks/tasks.dart' show Task;

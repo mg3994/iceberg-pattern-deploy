@@ -1,66 +1,41 @@
-import 'dart:async';
 import 'package:bloc_signals_flutter/bloc_signals_flutter.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
-import 'application/task_board_cubit.dart';
-import 'data/task_repository.dart';
-import 'domain/task.dart';
-import 'presentation/task_board_screen.dart';
+import 'package:tasks/tasks.dart';
 
 void main() {
-  final mockStreamController = StreamController<List<Task>>.broadcast();
-
-  final currentTasks = <Task>[
+  final initialTasks = <Task>[
     (
     id: '1',
     title: 'Draft Iceberg Pattern architecture article',
     isCompleted: true,
-    tags: ['work', 'writing'],
+    tags: const IListConst(['work', 'writing']),
     ),
     (
     id: '2',
     title: 'Review PR feedback on BlocSignal ecosystem',
     isCompleted: false,
-    tags: ['work'],
+    tags: const IListConst(['work']),
     ),
     (
     id: '3',
     title: 'Grocery shopping & farmers market (Fails Sync)',
     isCompleted: false,
-    tags: ['personal'],
+    tags: const IListConst(['personal']),
     ),
   ];
 
+  // Initialize Tier 1 Datastore
+  final dataSource = MockTaskDataSource(initialTasks);
+
+  // Initialize Tier 2 Submerged Engine
   final repository = TaskRepository(
-    cloudSnapshotStream: mockStreamController.stream,
-    initialTasks: currentTasks,
-    updateCloudTask: (id, isCompleted) async {
-      // Simulate remote cloud write latency
-      await Future<void>.delayed(const Duration(milliseconds: 600));
-
-      // Intentionally fail sync for task 3 to demonstrate optimistic UI rollback
-      if (id == '3') {
-        throw Exception('Cloud server write failure');
-      }
-
-      final index = currentTasks.indexWhere((t) => t.id == id);
-      if (index != -1) {
-        final old = currentTasks[index];
-        currentTasks[index] = (
-          id: old.id,
-          title: old.title,
-          isCompleted: isCompleted,
-          tags: old.tags,
-        );
-        mockStreamController.add(currentTasks);
-      }
-    },
-    deleteCloudTask: (id) async {
-      // Simulate server deletion latency
-      await Future<void>.delayed(const Duration(milliseconds: 800));
-      currentTasks.removeWhere((t) => t.id == id);
-      mockStreamController.add(currentTasks);
-    },
+    dataSource: dataSource,
+    initialTasks: initialTasks,
   );
+
+  // Prime the initial mock snapshot channel
+  dataSource.primeChannel();
 
   runApp(
     IcebergPatternApp(

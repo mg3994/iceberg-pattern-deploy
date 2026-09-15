@@ -2,6 +2,7 @@
 // ignore: depend_on_referenced_packages
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:tasks/tasks.dart' show TasksTable;
 
 import 'package:path_provider/path_provider.dart'
     show getApplicationSupportDirectory;
@@ -45,7 +46,7 @@ class AppearanceSettings extends Table {
 
 // TODO: remove above from here to separate related package
 
-@DriftDatabase(tables: [AppearanceSettings])
+@DriftDatabase(tables: [AppearanceSettings, TasksTable])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
       : super(
