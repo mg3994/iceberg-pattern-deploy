@@ -61,41 +61,38 @@ class TaskRepository implements ITaskRepository {
   /// OPTIMISTIC MUTATION: Updates state across all screens in 0ms, synchronizes with cloud in background.
   @override
   Future<void> toggleTask(String id, bool currentStatus) async {
-    if (!_guard.claim(id)) return;
-
     final newStatus = !currentStatus;
-    _optimisticPatches.value = {..._optimisticPatches.value, id: newStatus};
 
-    try {
-      await _dataSource.updateTask(id, newStatus);
-      // Reconcile atomically using batch(): clear override and clear sync error
-      batch(() {
-        _hasSyncError.value = false;
-        final updated = Map<String, bool>.from(_optimisticPatches.value)
-          ..remove(id);
-        _optimisticPatches.value = updated;
-      });
-    } catch (error, stackTrace) {
-      // Rollback atomically using batch(): silently revert override and set sync error
-      batch(() {
-        final updated = Map<String, bool>.from(_optimisticPatches.value)
-          ..remove(id);
-        _optimisticPatches.value = updated;
-        _hasSyncError.value = true;
-      });
-      Error.throwWithStackTrace(
-        SyncRollbackException('Failed to update task $id. Reverted.', error),
-        stackTrace,
-      );
-    } finally {
-      _guard.release(id);
-    }
+    await (() async {
+      _optimisticPatches.value = {..._optimisticPatches.value, id: newStatus};
+
+      try {
+        await _dataSource.updateTask(id, newStatus);
+        // Reconcile atomically using batch(): clear override and clear sync error
+        batch(() {
+          _hasSyncError.value = false;
+          final updated = Map<String, bool>.from(_optimisticPatches.value)..remove(id);
+          _optimisticPatches.value = updated;
+        });
+      } catch (error, stackTrace) {
+        // Rollback atomically using batch(): silently revert override and set sync error
+        batch(() {
+          final updated = Map<String, bool>.from(_optimisticPatches.value)..remove(id);
+          _optimisticPatches.value = updated;
+          _hasSyncError.value = true;
+        });
+        Error.throwWithStackTrace(
+          SyncRollbackException('Failed to update task $id. Reverted.', error),
+          stackTrace,
+        );
+      }
+    }).guardedBy(_guard, id);
   }
 
   /// PESSIMISTIC MUTATION: Awaits server confirmation before resolving.
   @override
   Future<void> deleteTask(String id) async {
-    await _dataSource.deleteTask(id);
+    await (() => _dataSource.deleteTask(id)).guardedBy(_guard, id);
   }
 
   @override
