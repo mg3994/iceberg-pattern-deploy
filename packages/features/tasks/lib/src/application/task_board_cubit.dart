@@ -18,11 +18,15 @@ typedef TaskStats = ({
   int visible,
 });
 
+/// Filter options for task completion status.
+enum TaskStatusFilter { all, active, completed }
+
 /// Screen-scoped presentation state for the Task Board.
 typedef TaskBoardState = ({
   IList<TaskItem> tasks,
   IList<String> availableTags,
   TaskStats stats,
+  TaskStatusFilter statusFilter,
   String? activeFilterTag,
   String searchQuery,
   String? isDeletingTaskId,
@@ -41,6 +45,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
             tasks: IList(),
             availableTags: IList(),
             stats: (total: 0, completed: 0, visible: 0),
+            statusFilter: TaskStatusFilter.all,
             activeFilterTag: null,
             searchQuery: '',
             isDeletingTaskId: null,
@@ -54,6 +59,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
 
   final TaskRepository _repository;
   final _activeFilterTag = signal<String?>(null);
+  final _statusFilter = signal<TaskStatusFilter>(TaskStatusFilter.all);
   final _searchQuery = signal<String>('');
   final _isDeletingTaskId = signal<String?>(null);
   
@@ -64,7 +70,8 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
     final computedState = computed(() {
       final allTasks = _repository.tasks.value;
       final activeIds = _repository.activeTaskIds.value;
-      final filter = _activeFilterTag.value;
+      final tagFilter = _activeFilterTag.value;
+      final statusFilter = _statusFilter.value;
       final query = _searchQuery.value.toLowerCase();
 
       // Derive all available tags from the task pool dynamically
@@ -76,25 +83,33 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
       }
       final sortedTags = tagsSet.toIList().sort();
 
-      // 1. Filter, 2. Map to View Model (TaskItem)
+      // Multi-dimensional filtering and temporal sorting
       final filteredTasks = allTasks.where((t) {
-        final matchesTag = filter == null || t.tags.contains(filter);
+        final matchesStatus = statusFilter == TaskStatusFilter.all ||
+            (statusFilter == TaskStatusFilter.active && !t.isCompleted) ||
+            (statusFilter == TaskStatusFilter.completed && t.isCompleted);
+        final matchesTag = tagFilter == null || t.tags.contains(tagFilter);
         final matchesSearch = query.isEmpty || t.title.toLowerCase().contains(query);
-        return matchesTag && matchesSearch;
+        
+        return matchesStatus && matchesTag && matchesSearch;
       }).map((task) => (
         task: task,
         isSyncing: activeIds.contains(task.id),
-      )).toIList();
+      )).toList();
+      
+      // Sort by createdAt descending (Newest first)
+      filteredTasks.sort((a, b) => b.task.createdAt.compareTo(a.task.createdAt));
 
       return (
-        tasks: filteredTasks,
+        tasks: filteredTasks.toIList(),
         availableTags: sortedTags,
         stats: (
           total: allTasks.length,
           completed: completedCount,
           visible: filteredTasks.length,
         ),
-        activeFilterTag: filter,
+        statusFilter: statusFilter,
+        activeFilterTag: tagFilter,
         searchQuery: _searchQuery.value,
         isDeletingTaskId: _isDeletingTaskId.value,
         hasSyncError: _repository.hasSyncError.value,
@@ -107,6 +122,9 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
 
   /// Updates the active category/tag filter.
   void setFilterTag(String? tag) => _activeFilterTag.value = tag;
+
+  /// Updates the status filter.
+  void setStatusFilter(TaskStatusFilter filter) => _statusFilter.value = filter;
 
   /// Updates the search query with a 300ms debounce.
   void setSearchQuery(String query) {
@@ -177,6 +195,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
     _disposeEffect();
     _debounceTimer?.cancel();
     _activeFilterTag.dispose();
+    _statusFilter.dispose();
     _searchQuery.dispose();
     _isDeletingTaskId.dispose();
     await super.close();

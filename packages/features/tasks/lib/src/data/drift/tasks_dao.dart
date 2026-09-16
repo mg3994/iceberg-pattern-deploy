@@ -6,6 +6,7 @@ typedef TaskDbData = ({
   String title,
   bool isCompleted,
   String serializedTags,
+  DateTime createdAt,
 });
 
 /// Feature-Sealed Contract governing relational data access operations without exposing internal mechanics.

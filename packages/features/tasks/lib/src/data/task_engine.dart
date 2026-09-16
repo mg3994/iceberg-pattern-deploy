@@ -62,6 +62,7 @@ class TaskRepository implements ITaskRepository {
             title: patch.title ?? task.title,
             isCompleted: patch.isCompleted ?? task.isCompleted,
             tags: patch.tags ?? task.tags,
+            createdAt: task.createdAt,
           ));
         } else {
           reconciled.add(task);
@@ -95,6 +96,7 @@ class TaskRepository implements ITaskRepository {
       title: title,
       isCompleted: false,
       tags: const IListConst<String>([]),
+      createdAt: DateTime.now(),
     );
 
     await (() async {
@@ -118,7 +120,7 @@ class TaskRepository implements ITaskRepository {
           stackTrace,
         );
       }
-    }).guardedBy(_guard, 'create_task');
+    }).guardedBy(_guard, task.id); // Use task.id instead of a global string to allow parallel creations
   }
 
   @override

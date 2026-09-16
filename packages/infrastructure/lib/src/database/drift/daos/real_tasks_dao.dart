@@ -19,6 +19,7 @@ class RealTasksDao implements TasksDao {
           title: row.title,
           isCompleted: row.isCompleted,
           serializedTags: row.serializedTags,
+          createdAt: row.createdAt,
         );
       }).toList();
     });
@@ -32,6 +33,7 @@ class RealTasksDao implements TasksDao {
             title: task.title,
             isCompleted: Value(task.isCompleted),
             serializedTags: task.serializedTags,
+            createdAt: task.createdAt,
           ),
           mode: InsertMode.insertOrReplace,
         );
@@ -79,6 +81,7 @@ class RealTasksDao implements TasksDao {
               title: t.title,
               isCompleted: Value(t.isCompleted),
               serializedTags: t.serializedTags,
+              createdAt: t.createdAt,
             )),
         mode: InsertMode.insertOrReplace,
       );

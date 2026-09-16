@@ -113,6 +113,24 @@ class TaskBoardScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: SegmentedButton<TaskStatusFilter>(
+                    segments: const [
+                      ButtonSegment(
+                          value: TaskStatusFilter.all, label: Text('All')),
+                      ButtonSegment(
+                          value: TaskStatusFilter.active, label: Text('Active')),
+                      ButtonSegment(
+                          value: TaskStatusFilter.completed,
+                          label: Text('Completed')),
+                    ],
+                    selected: {state.statusFilter},
+                    onSelectionChanged: (value) => context
+                        .read<TaskBoardCubit>()
+                        .setStatusFilter(value.first),
+                  ),
+                ),
                 Expanded(
                   child: state.tasks.isEmpty
                       ? _buildEmptyState(context, state)
@@ -206,8 +224,10 @@ class TaskBoardScreen extends StatelessWidget {
   }
 
   Widget _buildEmptyState(BuildContext context, TaskBoardState state) {
-    final hasFilter = state.activeFilterTag != null || state.searchQuery.isNotEmpty;
-    
+    final hasFilter = state.activeFilterTag != null ||
+        state.searchQuery.isNotEmpty ||
+        state.statusFilter != TaskStatusFilter.all;
+
     return Center(
       child: Column(
         mainAxisAlignment: .center,
@@ -219,7 +239,9 @@ class TaskBoardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            hasFilter ? 'No tasks match your criteria' : 'Your task board is empty',
+            hasFilter
+                ? 'No tasks match your criteria'
+                : 'Your task board is empty',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Colors.grey[600],
                 ),
@@ -230,6 +252,7 @@ class TaskBoardScreen extends StatelessWidget {
                 final cubit = context.read<TaskBoardCubit>();
                 cubit.setFilterTag(null);
                 cubit.setSearchQuery('');
+                cubit.setStatusFilter(TaskStatusFilter.all);
               },
               child: const Text('Clear all filters'),
             ),

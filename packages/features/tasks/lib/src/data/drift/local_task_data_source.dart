@@ -24,6 +24,7 @@ class DriftTaskDataSource implements source.LocalTaskDataSource {
           title: row.title,
           isCompleted: row.isCompleted,
           tags: tagsList,
+          createdAt: row.createdAt,
         );
       }).toList();
     });
@@ -36,6 +37,7 @@ class DriftTaskDataSource implements source.LocalTaskDataSource {
       title: task.title,
       isCompleted: task.isCompleted,
       serializedTags: task.tags.join(','),
+      createdAt: task.createdAt,
     ));
   }
 
@@ -67,6 +69,7 @@ class DriftTaskDataSource implements source.LocalTaskDataSource {
               title: t.title,
               isCompleted: t.isCompleted,
               serializedTags: t.tags.join(','),
+              createdAt: t.createdAt,
             ))
         .toList();
 

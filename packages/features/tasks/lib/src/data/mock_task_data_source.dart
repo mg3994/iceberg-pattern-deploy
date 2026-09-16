@@ -46,6 +46,7 @@ class MockTaskDataSource implements RemoteTaskDataSource {
         title: old.title,
         isCompleted: isCompleted,
         tags: old.tags,
+        createdAt: old.createdAt,
       );
       _controller.add(List.from(_currentTasks));
     }
@@ -69,6 +70,7 @@ class MockTaskDataSource implements RemoteTaskDataSource {
         title: newTitle,
         isCompleted: old.isCompleted,
         tags: old.tags,
+        createdAt: old.createdAt,
       );
       _controller.add(List.from(_currentTasks));
     }
@@ -93,6 +95,7 @@ class MockTaskDataSource implements RemoteTaskDataSource {
         title: old.title,
         isCompleted: old.isCompleted,
         tags: tags,
+        createdAt: old.createdAt,
       );
       _controller.add(List.from(_currentTasks));
     }

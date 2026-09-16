@@ -6,6 +6,7 @@ typedef Task = ({
   String title,
   bool isCompleted,
   IList<String> tags,
+  DateTime createdAt,
 });
 
 /// Structural patch definition carrying partial updates for a Task entity.
