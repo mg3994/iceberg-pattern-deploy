@@ -9,10 +9,6 @@ import 'task_data_source.dart';
 /// The Submerged Engine: High-availability dual-track synchronization.
 /// Uses the local database as a persistent intent log to survive app restarts.
 class TaskRepository implements ITaskRepository {
-  final RemoteTaskDataSource _remoteDataSource;
-  final LocalTaskDataSource _localDataSource;
-  final ConnectivityService _connectivity;
-
   TaskRepository({
     required RemoteTaskDataSource remoteDataSource,
     required LocalTaskDataSource localDataSource,
@@ -22,6 +18,10 @@ class TaskRepository implements ITaskRepository {
         _connectivity = connectivity {
     _initEngine();
   }
+
+  final RemoteTaskDataSource _remoteDataSource;
+  final LocalTaskDataSource _localDataSource;
+  final ConnectivityService _connectivity;
 
   // In-flight guard against rapid re-entrant toggles
   final _guard = MutationGuard<String>();
