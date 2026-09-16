@@ -23,6 +23,7 @@ class TaskRepository implements ITaskRepository {
   // Private Reactive Graph
   late final StreamSignal<List<Task>> _cloudStreamSignal;
   final _optimisticPatches = signal<Map<String, bool>>({});
+  final _optimisticDeletions = signal<Set<String>>({});
   final _hasSyncError = signal<bool>(false);
   late final Computed<List<Task>> _computedTasks;
 
@@ -35,9 +36,11 @@ class TaskRepository implements ITaskRepository {
     _computedTasks = computed(() {
       final baseTasks = _cloudStreamSignal.value.value ?? const [];
       final overrides = _optimisticPatches.value;
-      if (overrides.isEmpty) return baseTasks;
+      final deletions = _optimisticDeletions.value;
 
-      return baseTasks.map((task) {
+      return baseTasks
+          .where((t) => !deletions.contains(t.id))
+          .map((task) {
         final override = overrides[task.id];
         return override != null
             ? (
@@ -57,6 +60,9 @@ class TaskRepository implements ITaskRepository {
 
   @override
   ReadonlySignal<bool> get hasSyncError => _hasSyncError;
+
+  @override
+  ReadonlySignal<bool> get isBusy => _guard.busySignal;
 
   /// OPTIMISTIC MUTATION: Updates state across all screens in 0ms, synchronizes with cloud in background.
   @override
@@ -89,10 +95,33 @@ class TaskRepository implements ITaskRepository {
     }).guardedBy(_guard, id);
   }
 
-  /// PESSIMISTIC MUTATION: Awaits server confirmation before resolving.
+  /// OPTIMISTIC MUTATION: Hides item instantly, synchronizes with cloud in background.
   @override
   Future<void> deleteTask(String id) async {
-    await (() => _dataSource.deleteTask(id)).guardedBy(_guard, id);
+    await (() async {
+      _optimisticDeletions.value = {..._optimisticDeletions.value, id};
+
+      try {
+        await _dataSource.deleteTask(id);
+        // Reconcile atomically
+        batch(() {
+          _hasSyncError.value = false;
+          final updated = Set<String>.from(_optimisticDeletions.value)..remove(id);
+          _optimisticDeletions.value = updated;
+        });
+      } catch (error, stackTrace) {
+        // Rollback atomically: show item again
+        batch(() {
+          final updated = Set<String>.from(_optimisticDeletions.value)..remove(id);
+          _optimisticDeletions.value = updated;
+          _hasSyncError.value = true;
+        });
+        Error.throwWithStackTrace(
+          SyncRollbackException('Failed to delete task $id. Reverted.', error),
+          stackTrace,
+        );
+      }
+    }).guardedBy(_guard, id);
   }
 
   @override
@@ -100,6 +129,7 @@ class TaskRepository implements ITaskRepository {
     _guard.clear();
     _cloudStreamSignal.dispose();
     _optimisticPatches.dispose();
+    _optimisticDeletions.dispose();
     _hasSyncError.dispose();
     _computedTasks.dispose();
   }

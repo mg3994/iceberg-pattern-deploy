@@ -10,6 +10,7 @@ List<Task> tasks,
 String? activeFilterTag,
 String? isDeletingTaskId,
 bool hasSyncError,
+bool isBusy,
 });
 
 /// The Visible Boundary: Screen-scoped facade that filters domain data,
@@ -24,6 +25,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
         activeFilterTag: null,
         isDeletingTaskId: null,
         hasSyncError: repository.hasSyncError.value,
+        isBusy: repository.isBusy.value,
         ),
         equals: (prev, curr) => prev == curr, // Built-in Dart 3 deep record structural equality
       ) {
@@ -49,6 +51,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
       activeFilterTag: filter,
       isDeletingTaskId: _isDeletingTaskId.value,
       hasSyncError: _repository.hasSyncError.value,
+      isBusy: _repository.isBusy.value,
       );
     });
 
@@ -69,17 +72,12 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
     );
   }
 
-  /// Dispatches pessimistic delete; tracks row-level spinner in screen state.
+  /// Dispatches optimistic delete.
   Future<void> deleteTask(String id) async {
-    _isDeletingTaskId.value = id;
     try {
       await _repository.deleteTask(id);
     } catch (error, stackTrace) {
       onError(error, stackTrace);
-    } finally {
-      if (!isClosed) {
-        _isDeletingTaskId.value = null;
-      }
     }
   }
 

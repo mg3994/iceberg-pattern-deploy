@@ -52,6 +52,8 @@ class TaskBoardScreen extends StatelessWidget {
             ),
             body: Column(
               children: [
+                if (state.isBusy)
+                  const LinearProgressIndicator(minHeight: 2),
                 Padding(
                   padding: const EdgeInsets.all(8),
                   child: Row(
@@ -87,15 +89,11 @@ class TaskBoardScreen extends StatelessWidget {
                     itemCount: state.tasks.length,
                     itemBuilder: (context, index) {
                       final task = state.tasks[index];
-                      final isDeleting =
-                          state.isDeletingTaskId == task.id;
 
                       return ListTile(
                         leading: Checkbox(
                           value: task.isCompleted,
-                          onChanged: isDeleting
-                              ? null
-                              : (_) => context
+                          onChanged: (_) => context
                               .read<TaskBoardCubit>()
                               .toggleTask(
                             task.id,
@@ -113,14 +111,7 @@ class TaskBoardScreen extends StatelessWidget {
                         subtitle: task.tags.isEmpty
                             ? null
                             : Text(task.tags.join(', ')),
-                        trailing: isDeleting
-                            ? const SizedBox.square(
-                          dimension: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
-                        )
-                            : IconButton(
+                        trailing: IconButton(
                           icon: const Icon(Icons.delete_outline),
                           onPressed: () => context
                               .read<TaskBoardCubit>()

@@ -9,6 +9,9 @@ abstract interface class ITaskRepository {
   /// Signal flagging synchronization exceptions.
   ReadonlySignal<bool> get hasSyncError;
 
+  /// Signal indicating if any mutation is in-flight.
+  ReadonlySignal<bool> get isBusy;
+
   /// Triggers an optimistic state switch.
   Future<void> toggleTask(String id, bool currentStatus);
 
