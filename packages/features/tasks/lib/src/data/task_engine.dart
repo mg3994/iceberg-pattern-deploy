@@ -11,12 +11,15 @@ import 'task_data_source.dart';
 class TaskRepository implements ITaskRepository {
   final RemoteTaskDataSource _remoteDataSource;
   final LocalTaskDataSource _localDataSource;
+  final ConnectivityService _connectivity;
 
   TaskRepository({
     required RemoteTaskDataSource remoteDataSource,
     required LocalTaskDataSource localDataSource,
+    required ConnectivityService connectivity,
   })  : _remoteDataSource = remoteDataSource,
-        _localDataSource = localDataSource {
+        _localDataSource = localDataSource,
+        _connectivity = connectivity {
     _initEngine();
   }
 
@@ -30,13 +33,14 @@ class TaskRepository implements ITaskRepository {
   final _hasSyncError = signal<bool>(false);
   late final Computed<List<Task>> _computedTasks;
   late final StreamSubscription<List<Task>> _remoteSyncSubscription;
+  late final void Function() _disposables;
   
   Timer? _syncQueueTimer;
 
   void _initEngine() {
     _localStreamSignal = streamSignal(() => _localDataSource.taskStream);
 
-    // Initial background sync
+    // Initial background sync from cloud truth
     _remoteSyncSubscription = _remoteDataSource.taskStream.listen((remoteTasks) {
       _localDataSource.syncRemoteData(remoteTasks);
     });
@@ -48,12 +52,14 @@ class TaskRepository implements ITaskRepository {
 
       if (patches.isEmpty && creations.isEmpty) return localTasks;
 
+      // High-performance single-pass reconciliation via for-in loop (Best for Memory/GC)
       final reconciled = <Task>[];
       final localIds = <String>{};
       for (final task in localTasks) {
         localIds.add(task.id);
         final patch = patches[task.id];
         
+        // Skip items marked for deletion
         if (patch?.isDeleted ?? false) continue;
 
         if (patch != null) {
@@ -71,13 +77,72 @@ class TaskRepository implements ITaskRepository {
         }
       }
 
+      // Filter out creations that have already materialized in the local stream
       final uniqueCreations = creations.where((t) => !localIds.contains(t.id));
+
       return reconciled + uniqueCreations.toList();
     });
 
-    // Start background worker to process unsynced intent log
-    _syncQueueTimer = Timer.periodic(const Duration(seconds: 5), (_) => _processSyncQueue());
-    _processSyncQueue(); // Run immediately on boot
+    // 🌊 PATCH GARBAGE COLLECTOR: Eliminates UI Flicker
+    // Automatically removes optimistic patches once they are acknowledged (ACKed) by the local stream.
+    final gcEffect = effect(() {
+      final localTasks = _localStreamSignal.value.value;
+      if (localTasks == null) return;
+
+      final patches = _optimisticPatches.value;
+      if (patches.isEmpty) return;
+
+      final localMap = {for (var t in localTasks) t.id: t};
+      Map<String, TaskPatch>? updatedMap;
+        
+      for (final entry in patches.entries) {
+        final id = entry.key;
+        final patch = entry.value;
+        final localTask = localMap[id];
+
+        bool isAcked = false;
+        if (patch.isDeleted == true) {
+          isAcked = localTask == null;
+        } else {
+          if (localTask != null) {
+            final matchesTitle = patch.title == null || localTask.title == patch.title;
+            final matchesStatus = patch.isCompleted == null || localTask.isCompleted == patch.isCompleted;
+            final matchesTags = patch.tags == null || localTask.tags == patch.tags;
+            isAcked = matchesTitle && matchesStatus && matchesTags;
+          }
+        }
+
+        if (isAcked) {
+          updatedMap ??= Map.from(patches.unlock);
+          updatedMap.remove(id);
+        }
+      }
+
+      if (updatedMap != null) {
+        _optimisticPatches.value = updatedMap.lock;
+      }
+    });
+
+    // Connectivity-aware sync orchestration
+    final connEffect = effect(() {
+      final isOnline = _connectivity.status.value == ConnectivityStatus.online;
+      
+      if (isOnline) {
+        // Start worker when online
+        _syncQueueTimer?.cancel();
+        _syncQueueTimer = Timer.periodic(const Duration(seconds: 10), (_) => _processSyncQueue());
+        unawaited(_processSyncQueue());
+      } else {
+        // Stop worker when offline to save battery/resources
+        _syncQueueTimer?.cancel();
+        _syncQueueTimer = null;
+      }
+    });
+
+    _disposables = () {
+      gcEffect();
+      connEffect();
+    };
   }
 
   @override
@@ -90,15 +155,22 @@ class TaskRepository implements ITaskRepository {
   ReadonlySignal<bool> get isBusy => _guard.busySignal;
 
   @override
+  ReadonlySignal<bool> get isOnline => computed(() => _connectivity.status.value == ConnectivityStatus.online);
+
+  @override
   ReadonlySignal<ISet<String>> get activeTaskIds => _guard.activeKeys;
+
+  @override
+  Future<void> triggerSyncManual() => _processSyncQueue();
 
   /// Background Worker: Scans Drift intent log and attempts cloud reconciliation.
   Future<void> _processSyncQueue() async {
+    if (_connectivity.status.value == ConnectivityStatus.offline) return;
+
     final unsynced = await _localDataSource.getUnsyncedTasks();
     if (unsynced.isEmpty) return;
 
     for (final task in unsynced) {
-      // Re-trigger the appropriate sync track based on item status
       if (task.syncStatus == TaskSyncStatus.pending || task.syncStatus == TaskSyncStatus.error) {
         unawaited(_reconcileTaskWithCloud(task));
       }
@@ -108,13 +180,9 @@ class TaskRepository implements ITaskRepository {
   Future<void> _reconcileTaskWithCloud(Task task) async {
     await _guard.run(task.id, () async {
       try {
-        // Attempt Cloud Write
-        await _remoteDataSource.createTask(task); // Remote createTask should handle upsert
-        
-        // Success: Clear intent log locally
+        await _remoteDataSource.createTask(task);
         await _localDataSource.updateTask(task.id, task.isCompleted, TaskSyncStatus.synced);
       } catch (e) {
-        // Failure: Flag in Drift for future retry
         await _localDataSource.updateTask(task.id, task.isCompleted, TaskSyncStatus.error, e.toString());
         batch(() => _hasSyncError.value = true);
       }
@@ -134,24 +202,18 @@ class TaskRepository implements ITaskRepository {
     );
 
     await (() async {
-      // 1. Memory Flash (0ms)
       _optimisticCreations.value = _optimisticCreations.value.add(task);
 
       try {
-        // 2. Persistent Intent Log (Drift)
         await _localDataSource.createTask(task);
-        
-        // 3. Clear memory flash immediately as Drift stream will now carry the 'pending' task
         _optimisticCreations.value = _optimisticCreations.value.remove(task);
 
-        // 4. Trigger Cloud Sync
-        await _remoteDataSource.createTask(task);
-
-        // 5. Success: Mark Synced in DB
-        await _localDataSource.updateTask(task.id, false, TaskSyncStatus.synced);
-        batch(() => _hasSyncError.value = false);
+        if (_connectivity.isOnline) {
+          await _remoteDataSource.createTask(task);
+          await _localDataSource.updateTask(task.id, false, TaskSyncStatus.synced);
+          batch(() => _hasSyncError.value = false);
+        }
       } catch (error, stackTrace) {
-        // 6. Network Failure: Keep in DB as 'error' for background retry
         await _localDataSource.updateTask(task.id, false, TaskSyncStatus.error, error.toString());
         batch(() {
           _optimisticCreations.value = _optimisticCreations.value.remove(task);
@@ -165,7 +227,6 @@ class TaskRepository implements ITaskRepository {
   @override
   Future<void> updateTaskTitle(String id, String newTitle) async {
     await (() async {
-      // 1. Memory Flash
       _optimisticPatches.value = _optimisticPatches.value.add(id, (
         title: newTitle,
         isCompleted: null,
@@ -174,16 +235,13 @@ class TaskRepository implements ITaskRepository {
       ));
 
       try {
-        // 2. Intent Log
         await _localDataSource.updateTaskTitle(id, newTitle, TaskSyncStatus.pending);
-        _optimisticPatches.value = _optimisticPatches.value.remove(id);
-
-        // 3. Cloud Sync
-        await _remoteDataSource.updateTaskTitle(id, newTitle);
-
-        // 4. Finalize
-        await _localDataSource.updateTaskTitle(id, newTitle, TaskSyncStatus.synced);
-        batch(() => _hasSyncError.value = false);
+        
+        if (_connectivity.isOnline) {
+          await _remoteDataSource.updateTaskTitle(id, newTitle);
+          await _localDataSource.updateTaskTitle(id, newTitle, TaskSyncStatus.synced);
+          batch(() => _hasSyncError.value = false);
+        }
       } catch (error) {
         await _localDataSource.updateTaskTitle(id, newTitle, TaskSyncStatus.error, error.toString());
         batch(() {
@@ -209,12 +267,12 @@ class TaskRepository implements ITaskRepository {
 
       try {
         await _localDataSource.updateTaskTags(id, nextTags, TaskSyncStatus.pending);
-        _optimisticPatches.value = _optimisticPatches.value.remove(id);
-
-        await _remoteDataSource.updateTaskTags(id, nextTags);
-
-        await _localDataSource.updateTaskTags(id, nextTags, TaskSyncStatus.synced);
-        batch(() => _hasSyncError.value = false);
+        
+        if (_connectivity.isOnline) {
+          await _remoteDataSource.updateTaskTags(id, nextTags);
+          await _localDataSource.updateTaskTags(id, nextTags, TaskSyncStatus.synced);
+          batch(() => _hasSyncError.value = false);
+        }
       } catch (error) {
         await _localDataSource.updateTaskTags(id, nextTags, TaskSyncStatus.error, error.toString());
         batch(() {
@@ -240,12 +298,12 @@ class TaskRepository implements ITaskRepository {
 
       try {
         await _localDataSource.updateTaskTags(id, nextTags, TaskSyncStatus.pending);
-        _optimisticPatches.value = _optimisticPatches.value.remove(id);
 
-        await _remoteDataSource.updateTaskTags(id, nextTags);
-
-        await _localDataSource.updateTaskTags(id, nextTags, TaskSyncStatus.synced);
-        batch(() => _hasSyncError.value = false);
+        if (_connectivity.isOnline) {
+          await _remoteDataSource.updateTaskTags(id, nextTags);
+          await _localDataSource.updateTaskTags(id, nextTags, TaskSyncStatus.synced);
+          batch(() => _hasSyncError.value = false);
+        }
       } catch (error) {
         await _localDataSource.updateTaskTags(id, nextTags, TaskSyncStatus.error, error.toString());
         batch(() {
@@ -270,12 +328,12 @@ class TaskRepository implements ITaskRepository {
 
       try {
         await _localDataSource.updateTask(id, newStatus, TaskSyncStatus.pending);
-        _optimisticPatches.value = _optimisticPatches.value.remove(id);
 
-        await _remoteDataSource.updateTask(id, newStatus);
-
-        await _localDataSource.updateTask(id, newStatus, TaskSyncStatus.synced);
-        batch(() => _hasSyncError.value = false);
+        if (_connectivity.isOnline) {
+          await _remoteDataSource.updateTask(id, newStatus);
+          await _localDataSource.updateTask(id, newStatus, TaskSyncStatus.synced);
+          batch(() => _hasSyncError.value = false);
+        }
       } catch (error) {
         await _localDataSource.updateTask(id, newStatus, TaskSyncStatus.error, error.toString());
         batch(() {
@@ -297,16 +355,10 @@ class TaskRepository implements ITaskRepository {
       ));
 
       try {
-        // For deletion, we don't have an 'error' state in DB typically, 
-        // we either delete or we don't. We'll mark as pending/error if we wanted persistent delete retry,
-        // but for now we'll just attempt background deletion.
-        await _remoteDataSource.deleteTask(id);
+        if (_connectivity.isOnline) {
+          await _remoteDataSource.deleteTask(id);
+        }
         await _localDataSource.deleteTask(id);
-
-        batch(() {
-          _hasSyncError.value = false;
-          _optimisticPatches.value = _optimisticPatches.value.remove(id);
-        });
       } catch (error) {
         batch(() {
           _optimisticPatches.value = _optimisticPatches.value.remove(id);
@@ -320,6 +372,7 @@ class TaskRepository implements ITaskRepository {
   void dispose() {
     _syncQueueTimer?.cancel();
     _remoteSyncSubscription.cancel();
+    _disposables();
     _guard.clear();
     _localStreamSignal.dispose();
     _optimisticPatches.dispose();

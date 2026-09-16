@@ -3,3 +3,4 @@ export 'build_mode/build_mode.dart';
 export 'config/config.dart';
 export 'errors/exceptions.dart';
 export 'utils/mutation_guard.dart';
+export 'network/connectivity_service.dart';

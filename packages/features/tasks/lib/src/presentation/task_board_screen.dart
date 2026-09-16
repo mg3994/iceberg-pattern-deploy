@@ -4,7 +4,7 @@ import '../application/task_board_cubit.dart';
 import '../domain/task_record.dart';
 
 /// Presentation Layer: Pure synchronous projection (UI = ƒ(State))
-/// with zero stream subscriptions, non-blocking sync error banner,
+/// with zero stream subscriptions, context-aware sync banners,
 /// and snack bar alerts via standard BlocSignalListener.
 class TaskBoardScreen extends StatelessWidget {
   /// Creates a [TaskBoardScreen].
@@ -27,27 +27,15 @@ class TaskBoardScreen extends StatelessWidget {
       },
       child: BlocSignalBuilder<TaskBoardCubit, TaskBoardState>(
         builder: (context, state) {
+          final showBanner = !state.isOnline || state.hasSyncError;
+
           return Scaffold(
             appBar: AppBar(
-              title: const Text('Tasks (High-Availability Iceberg)'),
-              bottom: state.hasSyncError
-                  ? const PreferredSize(
-                      preferredSize: Size.fromHeight(28),
-                      child: ColoredBox(
-                        color: Colors.amber,
-                        child: Center(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 4),
-                            child: Text(
-                              'Offline / Sync Errors Present — Retrying in background',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+              title: const Text('Tasks (The Smart Iceberg)'),
+              bottom: showBanner
+                  ? PreferredSize(
+                      preferredSize: const Size.fromHeight(32),
+                      child: _buildConnectivityBanner(context, state),
                     )
                   : null,
             ),
@@ -227,6 +215,47 @@ class TaskBoardScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildConnectivityBanner(BuildContext context, TaskBoardState state) {
+    final color = !state.isOnline ? Colors.grey[700]! : Colors.amber[700]!;
+    final message = !state.isOnline
+        ? 'Device Offline — Changes Saved Locally'
+        : 'Sync Errors Present — Retrying in background';
+
+    return Container(
+      color: color,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        mainAxisAlignment: .center,
+        children: [
+          Icon(
+            !state.isOnline ? Icons.wifi_off : Icons.sync_problem,
+            size: 14,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ),
+          if (state.isOnline && state.hasSyncError)
+            TextButton(
+              onPressed: context.read<TaskBoardCubit>().onRetrySync,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('RETRY NOW', style: TextStyle(fontSize: 10)),
+            ),
+        ],
       ),
     );
   }

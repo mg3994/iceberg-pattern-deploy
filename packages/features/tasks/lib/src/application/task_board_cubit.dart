@@ -32,6 +32,7 @@ typedef TaskBoardState = ({
   String? isDeletingTaskId,
   bool hasSyncError,
   bool isBusy,
+  bool isOnline,
 });
 
 /// The Visible Boundary: Screen-scoped facade that filters domain data,
@@ -51,6 +52,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
             isDeletingTaskId: null,
             hasSyncError: repository.hasSyncError.value,
             isBusy: repository.isBusy.value,
+            isOnline: repository.isOnline.value,
           ),
           equals: (prev, curr) => prev == curr, // Built-in Dart 3 deep record structural equality
         ) {
@@ -114,6 +116,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
         isDeletingTaskId: _isDeletingTaskId.value,
         hasSyncError: _repository.hasSyncError.value,
         isBusy: _repository.isBusy.value,
+        isOnline: _repository.isOnline.value,
       );
     });
 
@@ -133,6 +136,9 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
       _searchQuery.value = query;
     });
   }
+
+  /// Triggers a manual background sync.
+  void onRetrySync() => _repository.triggerSyncManual();
 
   /// Creates a new task.
   Future<void> onCreateTask(String title) async {

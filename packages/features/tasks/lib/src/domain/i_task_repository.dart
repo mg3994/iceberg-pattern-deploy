@@ -13,8 +13,14 @@ abstract interface class ITaskRepository {
   /// Signal indicating if any mutation is in-flight.
   ReadonlySignal<bool> get isBusy;
 
+  /// Signal indicating the current connectivity state.
+  ReadonlySignal<bool> get isOnline;
+
   /// Signal containing the set of IDs currently undergoing mutation.
   ReadonlySignal<ISet<String>> get activeTaskIds;
+
+  /// Forces an immediate processing of the background sync queue.
+  Future<void> triggerSyncManual();
 
   /// Appends a new task using the optimistic track.
   Future<void> createTask(String title);
