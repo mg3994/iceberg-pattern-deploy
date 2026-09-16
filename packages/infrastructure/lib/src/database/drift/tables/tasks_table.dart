@@ -8,6 +8,10 @@ class TasksTable extends Table {
   TextColumn get serializedTags => text()();
   DateTimeColumn get createdAt => dateTime()();
 
+  /// 0: synced, 1: pending, 2: error
+  IntColumn get syncStatus => integer().withDefault(const Constant(0))();
+  TextColumn get lastError => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }

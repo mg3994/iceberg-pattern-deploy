@@ -20,9 +20,26 @@ class RealTasksDao implements TasksDao {
           isCompleted: row.isCompleted,
           serializedTags: row.serializedTags,
           createdAt: row.createdAt,
+          syncStatus: row.syncStatus,
+          lastError: row.lastError,
         );
       }).toList();
     });
+  }
+
+  @override
+  Future<List<TaskDbData>> getUnsyncedTasks() async {
+    final query = _db.select(_db.tasksTable)..where((t) => t.syncStatus.isNotValue(0));
+    final rows = await query.get();
+    return rows.map((row) => (
+      id: row.id,
+      title: row.title,
+      isCompleted: row.isCompleted,
+      serializedTags: row.serializedTags,
+      createdAt: row.createdAt,
+      syncStatus: row.syncStatus,
+      lastError: row.lastError,
+    )).toList();
   }
 
   @override
@@ -34,34 +51,42 @@ class RealTasksDao implements TasksDao {
             isCompleted: Value(task.isCompleted),
             serializedTags: task.serializedTags,
             createdAt: task.createdAt,
+            syncStatus: Value(task.syncStatus),
+            lastError: Value(task.lastError),
           ),
           mode: InsertMode.insertOrReplace,
         );
   }
 
   @override
-  Future<void> updateTaskStatus(String id, bool isCompleted) async {
+  Future<void> updateTaskStatus(String id, bool isCompleted, int syncStatus, [String? error]) async {
     await (_db.update(_db.tasksTable)..where((t) => t.id.equals(id))).write(
       TasksTableCompanion(
         isCompleted: Value(isCompleted),
+        syncStatus: Value(syncStatus),
+        lastError: Value(error),
       ),
     );
   }
 
   @override
-  Future<void> updateTaskTitle(String id, String newTitle) async {
+  Future<void> updateTaskTitle(String id, String newTitle, int syncStatus, [String? error]) async {
     await (_db.update(_db.tasksTable)..where((t) => t.id.equals(id))).write(
       TasksTableCompanion(
         title: Value(newTitle),
+        syncStatus: Value(syncStatus),
+        lastError: Value(error),
       ),
     );
   }
 
   @override
-  Future<void> updateTaskTags(String id, String serializedTags) async {
+  Future<void> updateTaskTags(String id, String serializedTags, int syncStatus, [String? error]) async {
     await (_db.update(_db.tasksTable)..where((t) => t.id.equals(id))).write(
       TasksTableCompanion(
         serializedTags: Value(serializedTags),
+        syncStatus: Value(syncStatus),
+        lastError: Value(error),
       ),
     );
   }
@@ -82,6 +107,8 @@ class RealTasksDao implements TasksDao {
               isCompleted: Value(t.isCompleted),
               serializedTags: t.serializedTags,
               createdAt: t.createdAt,
+              syncStatus: Value(t.syncStatus),
+              lastError: Value(t.lastError),
             )),
         mode: InsertMode.insertOrReplace,
       );
