@@ -62,6 +62,15 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
   /// Updates the active category/tag filter.
   void setFilterTag(String? tag) => _activeFilterTag.value = tag;
 
+  /// Creates a new task.
+  Future<void> onCreateTask(String title) async {
+    try {
+      await _repository.createTask(title);
+    } catch (error, stackTrace) {
+      onError(error, stackTrace);
+    }
+  }
+
   /// Dispatches optimistic toggle; forwards failure to onError for SnackBar display.
   void toggleTask(String id, bool currentStatus) {
     unawaited(

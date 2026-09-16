@@ -12,6 +12,9 @@ abstract interface class ITaskRepository {
   /// Signal indicating if any mutation is in-flight.
   ReadonlySignal<bool> get isBusy;
 
+  /// Appends a new task using the optimistic track.
+  Future<void> createTask(String title);
+
   /// Triggers an optimistic state switch.
   Future<void> toggleTask(String id, bool currentStatus);
 

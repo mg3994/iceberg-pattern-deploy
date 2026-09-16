@@ -25,6 +25,19 @@ class RealTasksDao implements TasksDao {
   }
 
   @override
+  Future<void> insertTask(TaskDbData task) async {
+    await _db.into(_db.tasksTable).insert(
+          TasksTableCompanion.insert(
+            id: task.id,
+            title: task.title,
+            isCompleted: Value(task.isCompleted),
+            serializedTags: task.serializedTags,
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+  }
+
+  @override
   Future<void> updateTaskStatus(String id, bool isCompleted) async {
     await (_db.update(_db.tasksTable)..where((t) => t.id.equals(id))).write(
       TasksTableCompanion(

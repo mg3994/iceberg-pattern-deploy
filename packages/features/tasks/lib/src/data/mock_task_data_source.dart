@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import '../domain/task_record.dart';
 import 'task_data_source.dart';
 
@@ -12,6 +11,20 @@ class MockTaskDataSource implements RemoteTaskDataSource {
 
   @override
   Stream<List<Task>> get taskStream => _controller.stream;
+
+  @override
+  Future<void> createTask(Task task) async {
+    // Simulate remote cloud write latency
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+
+    // Intentionally fail sync if title contains 'Error'
+    if (task.title.contains('Error')) {
+      throw Exception('Cloud server creation failure');
+    }
+
+    _currentTasks.add(task);
+    _controller.add(List.from(_currentTasks));
+  }
 
   @override
   Future<void> updateTask(String id, bool isCompleted) async {

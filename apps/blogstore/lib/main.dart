@@ -1,38 +1,18 @@
 import 'package:bloc_signals_flutter/bloc_signals_flutter.dart';
-import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
 import 'package:infrastructure/infrastructure.dart';
 import 'package:tasks/tasks.dart';
 
 void main() {
-  final initialTasks = <Task>[
-    (
-    id: '1',
-    title: 'Draft Iceberg Pattern architecture article',
-    isCompleted: true,
-    tags: const IListConst(['work', 'writing']),
-    ),
-    (
-    id: '2',
-    title: 'Review PR feedback on BlocSignal ecosystem',
-    isCompleted: false,
-    tags: const IListConst(['work']),
-    ),
-    (
-    id: '3',
-    title: 'Grocery shopping & farmers market (Fails Sync)',
-    isCompleted: false,
-    tags: const IListConst(['personal']),
-    ),
-  ];
-
   // Initialize Physical Persistence
   final db = AppDatabase();
   final tasksDao = RealTasksDao(database: db);
 
   // Initialize Tier 1 Datastores
   final localDataSource = DriftTaskDataSource(dao: tasksDao);
-  final remoteDataSource = MockTaskDataSource(initialTasks);
+  
+  // Initialize with EMPTY remote to demonstrate cloud-to-local sync
+  final remoteDataSource = MockTaskDataSource([]);
 
   // Initialize Tier 2 Submerged Engine (Dual-Track Sync)
   final repository = TaskRepository(
@@ -40,7 +20,7 @@ void main() {
     remoteDataSource: remoteDataSource,
   );
 
-  // Prime the remote simulation channel
+  // Prime the remote simulation channel (starts empty)
   remoteDataSource.primeChannel();
 
   runApp(

@@ -28,6 +28,7 @@ class TaskRepository implements ITaskRepository {
   late final StreamSignal<List<Task>> _localStreamSignal;
   final _optimisticPatches = signal<IMap<String, bool>>(IMap());
   final _optimisticDeletions = signal<ISet<String>>(ISet());
+  final _optimisticCreations = signal<IList<Task>>(IList());
   final _hasSyncError = signal<bool>(false);
   late final Computed<List<Task>> _computedTasks;
   late final StreamSubscription<List<Task>> _remoteSyncSubscription;
@@ -43,15 +44,14 @@ class TaskRepository implements ITaskRepository {
       _localDataSource.syncRemoteData(remoteTasks);
     });
 
-    // 3. Unified Projection: Merge Local Stream + In-flight Patches + In-flight Deletions
+    // 3. Unified Projection: Merge Local Stream + In-flight Patches + In-flight Deletions + In-flight Creations
     _computedTasks = computed(() {
       final localTasks = _localStreamSignal.value.value ?? const [];
       final overrides = _optimisticPatches.value;
       final deletions = _optimisticDeletions.value;
+      final creations = _optimisticCreations.value;
 
-      if (overrides.isEmpty && deletions.isEmpty) return localTasks;
-
-      return localTasks.where((t) => !deletions.contains(t.id)).map((task) {
+      final reconciled = localTasks.where((t) => !deletions.contains(t.id)).map((task) {
         final patch = overrides[task.id];
         return patch != null
             ? (
@@ -62,6 +62,8 @@ class TaskRepository implements ITaskRepository {
               )
             : task;
       }).toList();
+
+      return reconciled + creations.toList();
     });
   }
 
@@ -74,6 +76,46 @@ class TaskRepository implements ITaskRepository {
 
   @override
   ReadonlySignal<bool> get isBusy => _guard.busySignal;
+
+  /// OPTIMISTIC CREATION: Appends task instantly, synchronizes with cloud in background.
+  @override
+  Future<void> createTask(String title) async {
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    final task = (
+      id: tempId,
+      title: title,
+      isCompleted: false,
+      tags: const IListConst<String>([]),
+    );
+
+    await (() async {
+      _optimisticCreations.value = _optimisticCreations.value.add(task);
+
+      try {
+        // Step A: Update Local Persistence (Ideally with actual ID from server, but for mock we use this)
+        await _localDataSource.createTask(task);
+
+        // Step B: Update Remote Cloud
+        await _remoteDataSource.createTask(task);
+
+        // Reconcile atomically
+        batch(() {
+          _hasSyncError.value = false;
+          _optimisticCreations.value = _optimisticCreations.value.remove(task);
+        });
+      } catch (error, stackTrace) {
+        // Rollback
+        batch(() {
+          _optimisticCreations.value = _optimisticCreations.value.remove(task);
+          _hasSyncError.value = true;
+        });
+        Error.throwWithStackTrace(
+          SyncRollbackException('Failed to create task. Reverted.', error),
+          stackTrace,
+        );
+      }
+    }).guardedBy(_guard, 'create_task');
+  }
 
   /// DUAL-TRACK MUTATION: Updates Local DB instantly, synchronizes with Cloud in background.
   @override
@@ -150,6 +192,7 @@ class TaskRepository implements ITaskRepository {
     _localStreamSignal.dispose();
     _optimisticPatches.dispose();
     _optimisticDeletions.dispose();
+    _optimisticCreations.dispose();
     _hasSyncError.dispose();
     _computedTasks.dispose();
   }

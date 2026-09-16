@@ -13,7 +13,7 @@ class TaskBoardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocSignalListener<TaskBoardCubit, TaskBoardState>(
       listenWhen: (previous, current) =>
-      !previous.hasSyncError && current.hasSyncError,
+          !previous.hasSyncError && current.hasSyncError,
       listener: (context, state) {
         if (state.hasSyncError) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -31,29 +31,28 @@ class TaskBoardScreen extends StatelessWidget {
               title: const Text('Tasks (The Iceberg Pattern)'),
               bottom: state.hasSyncError
                   ? const PreferredSize(
-                preferredSize: Size.fromHeight(28),
-                child: ColoredBox(
-                  color: Colors.amber,
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4),
-                      child: Text(
-                        'Offline / Sync Error — Showing Cached Tasks',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                      preferredSize: Size.fromHeight(28),
+                      child: ColoredBox(
+                        color: Colors.amber,
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 4),
+                            child: Text(
+                              'Offline / Sync Error — Showing Cached Tasks',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ),
-              )
+                    )
                   : null,
             ),
             body: Column(
               children: [
-                if (state.isBusy)
-                  const LinearProgressIndicator(minHeight: 2),
+                if (state.isBusy) const LinearProgressIndicator(minHeight: 2),
                 Padding(
                   padding: const EdgeInsets.all(8),
                   child: Row(
@@ -86,46 +85,86 @@ class TaskBoardScreen extends StatelessWidget {
                   child: state.tasks.isEmpty
                       ? const Center(child: Text('No tasks found'))
                       : ListView.builder(
-                    itemCount: state.tasks.length,
-                    itemBuilder: (context, index) {
-                      final task = state.tasks[index];
+                          itemCount: state.tasks.length,
+                          itemBuilder: (context, index) {
+                            final task = state.tasks[index];
 
-                      return ListTile(
-                        leading: Checkbox(
-                          value: task.isCompleted,
-                          onChanged: (_) => context
-                              .read<TaskBoardCubit>()
-                              .toggleTask(
-                            task.id,
-                            task.isCompleted,
-                          ),
+                            return ListTile(
+                              leading: Checkbox(
+                                value: task.isCompleted,
+                                onChanged: (_) => context
+                                    .read<TaskBoardCubit>()
+                                    .toggleTask(
+                                      task.id,
+                                      task.isCompleted,
+                                    ),
+                              ),
+                              title: Text(
+                                task.title,
+                                style: TextStyle(
+                                  decoration: task.isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
+                              ),
+                              subtitle: task.tags.isEmpty
+                                  ? null
+                                  : Text(task.tags.join(', ')),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: () => context
+                                    .read<TaskBoardCubit>()
+                                    .deleteTask(task.id),
+                              ),
+                            );
+                          },
                         ),
-                        title: Text(
-                          task.title,
-                          style: TextStyle(
-                            decoration: task.isCompleted
-                                ? TextDecoration.lineThrough
-                                : null,
-                          ),
-                        ),
-                        subtitle: task.tags.isEmpty
-                            ? null
-                            : Text(task.tags.join(', ')),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () => context
-                              .read<TaskBoardCubit>()
-                              .deleteTask(task.id),
-                        ),
-                      );
-                    },
-                  ),
                 ),
               ],
+            ),
+            floatingActionButton: FloatingActionButton(
+              onPressed: () => _showAddTaskDialog(context),
+              tooltip: 'Add Task',
+              child: const Icon(Icons.add),
             ),
           );
         },
       ),
+    );
+  }
+
+  void _showAddTaskDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('New Task'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Enter task title...',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final title = controller.text.trim();
+                if (title.isNotEmpty) {
+                  context.read<TaskBoardCubit>().onCreateTask(title);
+                }
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

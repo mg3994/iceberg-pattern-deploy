@@ -30,6 +30,16 @@ class DriftTaskDataSource implements source.LocalTaskDataSource {
   }
 
   @override
+  Future<void> createTask(Task task) async {
+    await _dao.insertTask((
+      id: task.id,
+      title: task.title,
+      isCompleted: task.isCompleted,
+      serializedTags: task.tags.join(','),
+    ));
+  }
+
+  @override
   Future<void> updateTask(String id, bool isCompleted) async {
     await _dao.updateTaskStatus(id, isCompleted);
   }

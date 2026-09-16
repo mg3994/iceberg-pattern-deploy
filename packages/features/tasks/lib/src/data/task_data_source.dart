@@ -5,6 +5,9 @@ abstract interface class RemoteTaskDataSource {
   /// Stream providing raw real-time data entries from the cloud.
   Stream<List<Task>> get taskStream;
 
+  /// Sends a raw creation update over the wire.
+  Future<void> createTask(Task task);
+
   /// Sends a raw mutation update over the wire.
   Future<void> updateTask(String id, bool isCompleted);
 
@@ -16,6 +19,9 @@ abstract interface class RemoteTaskDataSource {
 abstract interface class LocalTaskDataSource {
   /// Stream providing raw real-time data entries from the local DB.
   Stream<List<Task>> get taskStream;
+
+  /// Inserts a task record locally.
+  Future<void> createTask(Task task);
 
   /// Updates a task record status locally.
   Future<void> updateTask(String id, bool isCompleted);

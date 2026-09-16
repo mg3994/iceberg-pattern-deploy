@@ -13,6 +13,9 @@ abstract interface class TasksDao {
   /// Stream providing typed relational task database rows.
   Stream<List<TaskDbData>> watchAllTasks();
 
+  /// Inserts a new task record.
+  Future<void> insertTask(TaskDbData task);
+
   /// Updates a task record status using strict compile-time types.
   Future<void> updateTaskStatus(String id, bool isCompleted);
 
