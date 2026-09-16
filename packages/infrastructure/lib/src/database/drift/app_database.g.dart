@@ -829,12 +829,49 @@ class $TasksTableTable extends TasksTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<int> syncStatus = GeneratedColumn<int>(
+    'sync_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
+  );
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
     title,
     isCompleted,
     serializedTags,
+    createdAt,
+    syncStatus,
+    lastError,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -881,6 +918,26 @@ class $TasksTableTable extends TasksTable
     } else if (isInserting) {
       context.missing(_serializedTagsMeta);
     }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
+      );
+    }
     return context;
   }
 
@@ -906,6 +963,18 @@ class $TasksTableTable extends TasksTable
         DriftSqlType.string,
         data['${effectivePrefix}serialized_tags'],
       )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sync_status'],
+      )!,
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
+      ),
     );
   }
 
@@ -920,11 +989,19 @@ class TasksTableData extends DataClass implements Insertable<TasksTableData> {
   final String title;
   final bool isCompleted;
   final String serializedTags;
+  final DateTime createdAt;
+
+  /// 0: synced, 1: pending, 2: error
+  final int syncStatus;
+  final String? lastError;
   const TasksTableData({
     required this.id,
     required this.title,
     required this.isCompleted,
     required this.serializedTags,
+    required this.createdAt,
+    required this.syncStatus,
+    this.lastError,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -933,6 +1010,11 @@ class TasksTableData extends DataClass implements Insertable<TasksTableData> {
     map['title'] = Variable<String>(title);
     map['is_completed'] = Variable<bool>(isCompleted);
     map['serialized_tags'] = Variable<String>(serializedTags);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['sync_status'] = Variable<int>(syncStatus);
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
+    }
     return map;
   }
 
@@ -942,6 +1024,11 @@ class TasksTableData extends DataClass implements Insertable<TasksTableData> {
       title: Value(title),
       isCompleted: Value(isCompleted),
       serializedTags: Value(serializedTags),
+      createdAt: Value(createdAt),
+      syncStatus: Value(syncStatus),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
     );
   }
 
@@ -955,6 +1042,9 @@ class TasksTableData extends DataClass implements Insertable<TasksTableData> {
       title: serializer.fromJson<String>(json['title']),
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       serializedTags: serializer.fromJson<String>(json['serializedTags']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      syncStatus: serializer.fromJson<int>(json['syncStatus']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
     );
   }
   @override
@@ -965,6 +1055,9 @@ class TasksTableData extends DataClass implements Insertable<TasksTableData> {
       'title': serializer.toJson<String>(title),
       'isCompleted': serializer.toJson<bool>(isCompleted),
       'serializedTags': serializer.toJson<String>(serializedTags),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'syncStatus': serializer.toJson<int>(syncStatus),
+      'lastError': serializer.toJson<String?>(lastError),
     };
   }
 
@@ -973,11 +1066,17 @@ class TasksTableData extends DataClass implements Insertable<TasksTableData> {
     String? title,
     bool? isCompleted,
     String? serializedTags,
+    DateTime? createdAt,
+    int? syncStatus,
+    Value<String?> lastError = const Value.absent(),
   }) => TasksTableData(
     id: id ?? this.id,
     title: title ?? this.title,
     isCompleted: isCompleted ?? this.isCompleted,
     serializedTags: serializedTags ?? this.serializedTags,
+    createdAt: createdAt ?? this.createdAt,
+    syncStatus: syncStatus ?? this.syncStatus,
+    lastError: lastError.present ? lastError.value : this.lastError,
   );
   TasksTableData copyWithCompanion(TasksTableCompanion data) {
     return TasksTableData(
@@ -989,6 +1088,11 @@ class TasksTableData extends DataClass implements Insertable<TasksTableData> {
       serializedTags: data.serializedTags.present
           ? data.serializedTags.value
           : this.serializedTags,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
     );
   }
 
@@ -998,13 +1102,24 @@ class TasksTableData extends DataClass implements Insertable<TasksTableData> {
           ..write('id: $id, ')
           ..write('title: $title, ')
           ..write('isCompleted: $isCompleted, ')
-          ..write('serializedTags: $serializedTags')
+          ..write('serializedTags: $serializedTags, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('lastError: $lastError')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, title, isCompleted, serializedTags);
+  int get hashCode => Object.hash(
+    id,
+    title,
+    isCompleted,
+    serializedTags,
+    createdAt,
+    syncStatus,
+    lastError,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1012,7 +1127,10 @@ class TasksTableData extends DataClass implements Insertable<TasksTableData> {
           other.id == this.id &&
           other.title == this.title &&
           other.isCompleted == this.isCompleted &&
-          other.serializedTags == this.serializedTags);
+          other.serializedTags == this.serializedTags &&
+          other.createdAt == this.createdAt &&
+          other.syncStatus == this.syncStatus &&
+          other.lastError == this.lastError);
 }
 
 class TasksTableCompanion extends UpdateCompanion<TasksTableData> {
@@ -1020,12 +1138,18 @@ class TasksTableCompanion extends UpdateCompanion<TasksTableData> {
   final Value<String> title;
   final Value<bool> isCompleted;
   final Value<String> serializedTags;
+  final Value<DateTime> createdAt;
+  final Value<int> syncStatus;
+  final Value<String?> lastError;
   final Value<int> rowid;
   const TasksTableCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
     this.isCompleted = const Value.absent(),
     this.serializedTags = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.lastError = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TasksTableCompanion.insert({
@@ -1033,15 +1157,22 @@ class TasksTableCompanion extends UpdateCompanion<TasksTableData> {
     required String title,
     this.isCompleted = const Value.absent(),
     required String serializedTags,
+    required DateTime createdAt,
+    this.syncStatus = const Value.absent(),
+    this.lastError = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title),
-       serializedTags = Value(serializedTags);
+       serializedTags = Value(serializedTags),
+       createdAt = Value(createdAt);
   static Insertable<TasksTableData> custom({
     Expression<String>? id,
     Expression<String>? title,
     Expression<bool>? isCompleted,
     Expression<String>? serializedTags,
+    Expression<DateTime>? createdAt,
+    Expression<int>? syncStatus,
+    Expression<String>? lastError,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1049,6 +1180,9 @@ class TasksTableCompanion extends UpdateCompanion<TasksTableData> {
       if (title != null) 'title': title,
       if (isCompleted != null) 'is_completed': isCompleted,
       if (serializedTags != null) 'serialized_tags': serializedTags,
+      if (createdAt != null) 'created_at': createdAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (lastError != null) 'last_error': lastError,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1058,6 +1192,9 @@ class TasksTableCompanion extends UpdateCompanion<TasksTableData> {
     Value<String>? title,
     Value<bool>? isCompleted,
     Value<String>? serializedTags,
+    Value<DateTime>? createdAt,
+    Value<int>? syncStatus,
+    Value<String?>? lastError,
     Value<int>? rowid,
   }) {
     return TasksTableCompanion(
@@ -1065,6 +1202,9 @@ class TasksTableCompanion extends UpdateCompanion<TasksTableData> {
       title: title ?? this.title,
       isCompleted: isCompleted ?? this.isCompleted,
       serializedTags: serializedTags ?? this.serializedTags,
+      createdAt: createdAt ?? this.createdAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+      lastError: lastError ?? this.lastError,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1084,6 +1224,15 @@ class TasksTableCompanion extends UpdateCompanion<TasksTableData> {
     if (serializedTags.present) {
       map['serialized_tags'] = Variable<String>(serializedTags.value);
     }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<int>(syncStatus.value);
+    }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1097,6 +1246,9 @@ class TasksTableCompanion extends UpdateCompanion<TasksTableData> {
           ..write('title: $title, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('serializedTags: $serializedTags, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('lastError: $lastError, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1483,6 +1635,9 @@ typedef $$TasksTableTableCreateCompanionBuilder =
       required String title,
       Value<bool> isCompleted,
       required String serializedTags,
+      required DateTime createdAt,
+      Value<int> syncStatus,
+      Value<String?> lastError,
       Value<int> rowid,
     });
 typedef $$TasksTableTableUpdateCompanionBuilder =
@@ -1491,6 +1646,9 @@ typedef $$TasksTableTableUpdateCompanionBuilder =
       Value<String> title,
       Value<bool> isCompleted,
       Value<String> serializedTags,
+      Value<DateTime> createdAt,
+      Value<int> syncStatus,
+      Value<String?> lastError,
       Value<int> rowid,
     });
 
@@ -1520,6 +1678,21 @@ class $$TasksTableTableFilterComposer
 
   ColumnFilters<String> get serializedTags => $composableBuilder(
     column: $table.serializedTags,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1552,6 +1725,21 @@ class $$TasksTableTableOrderingComposer
     column: $table.serializedTags,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TasksTableTableAnnotationComposer
@@ -1578,6 +1766,17 @@ class $$TasksTableTableAnnotationComposer
     column: $table.serializedTags,
     builder: (column) => column,
   );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
 }
 
 class $$TasksTableTableTableManager
@@ -1615,12 +1814,18 @@ class $$TasksTableTableTableManager
                 Value<String> title = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
                 Value<String> serializedTags = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> syncStatus = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TasksTableCompanion(
                 id: id,
                 title: title,
                 isCompleted: isCompleted,
                 serializedTags: serializedTags,
+                createdAt: createdAt,
+                syncStatus: syncStatus,
+                lastError: lastError,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1629,12 +1834,18 @@ class $$TasksTableTableTableManager
                 required String title,
                 Value<bool> isCompleted = const Value.absent(),
                 required String serializedTags,
+                required DateTime createdAt,
+                Value<int> syncStatus = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TasksTableCompanion.insert(
                 id: id,
                 title: title,
                 isCompleted: isCompleted,
                 serializedTags: serializedTags,
+                createdAt: createdAt,
+                syncStatus: syncStatus,
+                lastError: lastError,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

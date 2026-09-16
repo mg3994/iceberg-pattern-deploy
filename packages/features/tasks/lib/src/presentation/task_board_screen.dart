@@ -1,6 +1,7 @@
 import 'package:bloc_signals_flutter/bloc_signals_flutter.dart';
 import 'package:flutter/material.dart';
 import '../application/task_board_cubit.dart';
+import '../domain/task_record.dart';
 
 /// Presentation Layer: Pure synchronous projection (UI = ƒ(State))
 /// with zero stream subscriptions, non-blocking sync error banner,
@@ -17,9 +18,9 @@ class TaskBoardScreen extends StatelessWidget {
       listener: (context, state) {
         if (state.hasSyncError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Sync failed: Reverted to server truth.'),
-              backgroundColor: Colors.redAccent,
+            SnackBar(
+              content: const Text('Sync failed: Some changes are logged for retry.'),
+              backgroundColor: Colors.amber[800],
             ),
           );
         }
@@ -28,7 +29,7 @@ class TaskBoardScreen extends StatelessWidget {
         builder: (context, state) {
           return Scaffold(
             appBar: AppBar(
-              title: const Text('Tasks (The Iceberg Pattern)'),
+              title: const Text('Tasks (High-Availability Iceberg)'),
               bottom: state.hasSyncError
                   ? const PreferredSize(
                       preferredSize: Size.fromHeight(28),
@@ -38,7 +39,7 @@ class TaskBoardScreen extends StatelessWidget {
                           child: Padding(
                             padding: EdgeInsets.symmetric(vertical: 4),
                             child: Text(
-                              'Offline / Sync Error — Showing Cached Tasks',
+                              'Offline / Sync Errors Present — Retrying in background',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
@@ -152,25 +153,32 @@ class TaskBoardScreen extends StatelessWidget {
                                           task.isCompleted,
                                         ),
                               ),
-                              title: InkWell(
-                                onTap: item.isSyncing
-                                    ? null
-                                    : () => _showTaskDialog(
-                                          context,
-                                          id: task.id,
-                                          initialTitle: task.title,
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: item.isSyncing
+                                          ? null
+                                          : () => _showTaskDialog(
+                                                context,
+                                                id: task.id,
+                                                initialTitle: task.title,
+                                              ),
+                                      child: Text(
+                                        task.title,
+                                        style: TextStyle(
+                                          decoration: task.isCompleted
+                                              ? TextDecoration.lineThrough
+                                              : null,
+                                          color: item.isSyncing
+                                              ? Colors.grey
+                                              : null,
                                         ),
-                                child: Text(
-                                  task.title,
-                                  style: TextStyle(
-                                    decoration: task.isCompleted
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                    color: item.isSyncing
-                                        ? Colors.grey
-                                        : null,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  _buildSyncIndicator(task.syncStatus),
+                                ],
                               ),
                               subtitle: Wrap(
                                 spacing: 4,
@@ -221,6 +229,20 @@ class TaskBoardScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Widget _buildSyncIndicator(TaskSyncStatus status) {
+    return switch (status) {
+      TaskSyncStatus.synced => const SizedBox.shrink(),
+      TaskSyncStatus.pending => const Padding(
+          padding: EdgeInsets.only(left: 4.0),
+          child: Icon(Icons.cloud_upload_outlined, size: 14, color: Colors.blue),
+        ),
+      TaskSyncStatus.error => const Padding(
+          padding: EdgeInsets.only(left: 4.0),
+          child: Icon(Icons.sync_problem, size: 14, color: Colors.red),
+        ),
+    };
   }
 
   Widget _buildEmptyState(BuildContext context, TaskBoardState state) {

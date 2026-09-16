@@ -1,6 +1,7 @@
 name: infrastructure
 description: A sample command-line application.
 version: 1.0.0
+publish_to: none
 # repository: https://github.com/my_org/my_repo
 
 environment:
@@ -9,6 +10,7 @@ resolution: workspace
 
 # Add regular dependencies here.
 dependencies:
+  drift: ^2.35.0
   drift_flutter: ^0.3.1
   path_provider: ^2.1.6
   tasks:
@@ -17,4 +19,5 @@ dependencies:
 
 dev_dependencies:
   drift_dev: ^2.35.0
+  build_runner: ^2.15.1
   

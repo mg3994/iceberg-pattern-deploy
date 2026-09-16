@@ -23,7 +23,12 @@ class MockTaskDataSource implements RemoteTaskDataSource {
       throw Exception('Cloud server creation failure');
     }
 
-    _currentTasks.add(task);
+    final index = _currentTasks.indexWhere((t) => t.id == task.id);
+    if (index != -1) {
+      _currentTasks[index] = task;
+    } else {
+      _currentTasks.add(task);
+    }
     _controller.add(List.from(_currentTasks));
   }
 
@@ -47,6 +52,8 @@ class MockTaskDataSource implements RemoteTaskDataSource {
         isCompleted: isCompleted,
         tags: old.tags,
         createdAt: old.createdAt,
+        syncStatus: TaskSyncStatus.synced,
+        lastErrorMessage: null,
       );
       _controller.add(List.from(_currentTasks));
     }
@@ -71,6 +78,8 @@ class MockTaskDataSource implements RemoteTaskDataSource {
         isCompleted: old.isCompleted,
         tags: old.tags,
         createdAt: old.createdAt,
+        syncStatus: TaskSyncStatus.synced,
+        lastErrorMessage: null,
       );
       _controller.add(List.from(_currentTasks));
     }
@@ -96,6 +105,8 @@ class MockTaskDataSource implements RemoteTaskDataSource {
         isCompleted: old.isCompleted,
         tags: tags,
         createdAt: old.createdAt,
+        syncStatus: TaskSyncStatus.synced,
+        lastErrorMessage: null,
       );
       _controller.add(List.from(_currentTasks));
     }
