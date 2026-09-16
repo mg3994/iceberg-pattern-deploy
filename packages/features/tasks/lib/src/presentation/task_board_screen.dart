@@ -54,7 +54,21 @@ class TaskBoardScreen extends StatelessWidget {
               children: [
                 if (state.isBusy) const LinearProgressIndicator(minHeight: 2),
                 Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: TextField(
+                    onChanged: context.read<TaskBoardCubit>().setSearchQuery,
+                    decoration: InputDecoration(
+                      hintText: 'Search tasks...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Row(
                     children: [
                       FilterChip(

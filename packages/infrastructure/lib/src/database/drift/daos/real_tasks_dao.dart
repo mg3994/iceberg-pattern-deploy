@@ -84,4 +84,12 @@ class RealTasksDao implements TasksDao {
       );
     });
   }
+
+  @override
+  Future<void> replaceTableContent(List<TaskDbData> tasks) async {
+    await _db.transaction(() async {
+      await _db.delete(_db.tasksTable).go();
+      await upsertTasks(tasks);
+    });
+  }
 }

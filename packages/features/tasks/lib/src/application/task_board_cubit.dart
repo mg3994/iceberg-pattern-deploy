@@ -9,6 +9,7 @@ import '../domain/task_record.dart';
 typedef TaskBoardState = ({
 IList<Task> tasks,
 String? activeFilterTag,
+String searchQuery,
 String? isDeletingTaskId,
 bool hasSyncError,
 bool isBusy,
@@ -24,6 +25,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
         initialState: (
         tasks: repository.tasks.value.lock,
         activeFilterTag: null,
+        searchQuery: '',
         isDeletingTaskId: null,
         hasSyncError: repository.hasSyncError.value,
         isBusy: repository.isBusy.value,
@@ -35,6 +37,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
 
   final TaskRepository _repository;
   final _activeFilterTag = signal<String?>(null);
+  final _searchQuery = signal<String>('');
   final _isDeletingTaskId = signal<String?>(null);
   late final void Function() _disposeEffect;
 
@@ -42,14 +45,18 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
     final computedState = computed(() {
       final allTasks = _repository.tasks.value;
       final filter = _activeFilterTag.value;
+      final query = _searchQuery.value.toLowerCase();
 
-      final filteredTasks = filter == null
-          ? allTasks.lock
-          : allTasks.where((t) => t.tags.contains(filter)).toIList();
+      final filteredTasks = allTasks.where((t) {
+        final matchesTag = filter == null || t.tags.contains(filter);
+        final matchesSearch = query.isEmpty || t.title.toLowerCase().contains(query);
+        return matchesTag && matchesSearch;
+      }).toIList();
 
       return (
       tasks: filteredTasks,
       activeFilterTag: filter,
+      searchQuery: _searchQuery.value,
       isDeletingTaskId: _isDeletingTaskId.value,
       hasSyncError: _repository.hasSyncError.value,
       isBusy: _repository.isBusy.value,
@@ -61,6 +68,9 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
 
   /// Updates the active category/tag filter.
   void setFilterTag(String? tag) => _activeFilterTag.value = tag;
+
+  /// Updates the search query.
+  void setSearchQuery(String query) => _searchQuery.value = query;
 
   /// Creates a new task.
   Future<void> onCreateTask(String title) async {
@@ -122,6 +132,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
   Future<void> close() async {
     _disposeEffect();
     _activeFilterTag.dispose();
+    _searchQuery.dispose();
     _isDeletingTaskId.dispose();
     await super.close();
   }

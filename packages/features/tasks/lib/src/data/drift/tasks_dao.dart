@@ -30,4 +30,7 @@ abstract interface class TasksDao {
 
   /// Bulk upserts tasks into the local database (Synchronizes Cloud -> Local).
   Future<void> upsertTasks(List<TaskDbData> tasks);
+
+  /// Atomically replaces all tasks in the local database with the provided snapshot.
+  Future<void> replaceTableContent(List<TaskDbData> tasks);
 }
