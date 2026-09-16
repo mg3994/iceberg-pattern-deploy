@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:core/core.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:signals_core/signals_core.dart';
 import '../domain/task_record.dart';
 import '../domain/i_task_repository.dart';
@@ -20,10 +21,10 @@ class TaskRepository implements ITaskRepository {
   // In-flight guard against rapid re-entrant toggles (DRY core primitive)
   final _guard = MutationGuard<String>();
 
-  // Private Reactive Graph
+  // Private Reactive Graph with structural sharing
   late final StreamSignal<List<Task>> _cloudStreamSignal;
-  final _optimisticPatches = signal<Map<String, bool>>({});
-  final _optimisticDeletions = signal<Set<String>>({});
+  final _optimisticPatches = signal<IMap<String, bool>>(IMap());
+  final _optimisticDeletions = signal<ISet<String>>(ISet());
   final _hasSyncError = signal<bool>(false);
   late final Computed<List<Task>> _computedTasks;
 
@@ -38,15 +39,16 @@ class TaskRepository implements ITaskRepository {
       final overrides = _optimisticPatches.value;
       final deletions = _optimisticDeletions.value;
 
-      return baseTasks
-          .where((t) => !deletions.contains(t.id))
-          .map((task) {
-        final override = overrides[task.id];
-        return override != null
+      if (overrides.isEmpty && deletions.isEmpty) return baseTasks;
+
+      // Single-pass reconciliation loop for O(N) memory efficiency
+      return baseTasks.where((t) => !deletions.contains(t.id)).map((task) {
+        final patch = overrides[task.id];
+        return patch != null
             ? (
                 id: task.id,
                 title: task.title,
-                isCompleted: override,
+                isCompleted: patch,
                 tags: task.tags,
               )
             : task;
@@ -70,21 +72,19 @@ class TaskRepository implements ITaskRepository {
     final newStatus = !currentStatus;
 
     await (() async {
-      _optimisticPatches.value = {..._optimisticPatches.value, id: newStatus};
+      _optimisticPatches.value = _optimisticPatches.value.add(id, newStatus);
 
       try {
         await _dataSource.updateTask(id, newStatus);
-        // Reconcile atomically using batch(): clear override and clear sync error
+        // Reconcile atomically
         batch(() {
           _hasSyncError.value = false;
-          final updated = Map<String, bool>.from(_optimisticPatches.value)..remove(id);
-          _optimisticPatches.value = updated;
+          _optimisticPatches.value = _optimisticPatches.value.remove(id);
         });
       } catch (error, stackTrace) {
-        // Rollback atomically using batch(): silently revert override and set sync error
+        // Rollback atomically
         batch(() {
-          final updated = Map<String, bool>.from(_optimisticPatches.value)..remove(id);
-          _optimisticPatches.value = updated;
+          _optimisticPatches.value = _optimisticPatches.value.remove(id);
           _hasSyncError.value = true;
         });
         Error.throwWithStackTrace(
@@ -99,21 +99,19 @@ class TaskRepository implements ITaskRepository {
   @override
   Future<void> deleteTask(String id) async {
     await (() async {
-      _optimisticDeletions.value = {..._optimisticDeletions.value, id};
+      _optimisticDeletions.value = _optimisticDeletions.value.add(id);
 
       try {
         await _dataSource.deleteTask(id);
         // Reconcile atomically
         batch(() {
           _hasSyncError.value = false;
-          final updated = Set<String>.from(_optimisticDeletions.value)..remove(id);
-          _optimisticDeletions.value = updated;
+          _optimisticDeletions.value = _optimisticDeletions.value.remove(id);
         });
       } catch (error, stackTrace) {
-        // Rollback atomically: show item again
+        // Rollback atomically
         batch(() {
-          final updated = Set<String>.from(_optimisticDeletions.value)..remove(id);
-          _optimisticDeletions.value = updated;
+          _optimisticDeletions.value = _optimisticDeletions.value.remove(id);
           _hasSyncError.value = true;
         });
         Error.throwWithStackTrace(

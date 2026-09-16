@@ -1,25 +1,26 @@
 import 'dart:async';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:signals_core/signals_core.dart';
 
 /// Reusable re-entrancy protector to block double-taps across any feature engine.
 class MutationGuard<T> {
-  final _inFlight = signal<Set<T>>({});
+  final _inFlight = signal<ISet<T>>(ISet());
 
   /// Claims execution rights for [id].
   /// Returns `true` if claimed, `false` if already in flight.
   bool claim(T id) {
     if (_inFlight.value.contains(id)) return false;
-    _inFlight.value = {..._inFlight.value, id};
+    _inFlight.value = _inFlight.value.add(id);
     return true;
   }
 
   /// Releases execution rights for [id].
   void release(T id) {
-    _inFlight.value = Set.from(_inFlight.value)..remove(id);
+    _inFlight.value = _inFlight.value.remove(id);
   }
 
   /// Clears all in-flight locks.
-  void clear() => _inFlight.value = {};
+  void clear() => _inFlight.value = ISet();
 
   /// Returns `true` if [id] currently has an operation in flight.
   bool isLocked(T id) => _inFlight.value.contains(id);
