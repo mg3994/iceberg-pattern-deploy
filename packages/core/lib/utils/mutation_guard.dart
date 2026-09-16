@@ -6,6 +6,9 @@ import 'package:signals_core/signals_core.dart';
 class MutationGuard<T> {
   final _inFlight = signal<ISet<T>>(ISet());
 
+  /// Exposes the set of keys currently in flight as a reactive signal.
+  ReadonlySignal<ISet<T>> get activeKeys => _inFlight;
+
   /// Claims execution rights for [id].
   /// Returns `true` if claimed, `false` if already in flight.
   bool claim(T id) {

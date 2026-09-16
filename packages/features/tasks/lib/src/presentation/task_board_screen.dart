@@ -67,7 +67,8 @@ class TaskBoardScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                Padding(
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Row(
                     children: [
@@ -78,20 +79,16 @@ class TaskBoardScreen extends StatelessWidget {
                             context.read<TaskBoardCubit>().setFilterTag(null),
                       ),
                       const SizedBox(width: 8),
-                      FilterChip(
-                        label: const Text('Work'),
-                        selected: state.activeFilterTag == 'work',
-                        onSelected: (_) =>
-                            context.read<TaskBoardCubit>().setFilterTag('work'),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        label: const Text('Personal'),
-                        selected: state.activeFilterTag == 'personal',
-                        onSelected: (_) => context
-                            .read<TaskBoardCubit>()
-                            .setFilterTag('personal'),
-                      ),
+                      ...state.availableTags.map((tag) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(tag),
+                              selected: state.activeFilterTag == tag,
+                              onSelected: (_) => context
+                                  .read<TaskBoardCubit>()
+                                  .setFilterTag(tag),
+                            ),
+                          )),
                     ],
                   ),
                 ),
@@ -101,29 +98,37 @@ class TaskBoardScreen extends StatelessWidget {
                       : ListView.builder(
                           itemCount: state.tasks.length,
                           itemBuilder: (context, index) {
-                            final task = state.tasks[index];
+                            final item = state.tasks[index];
+                            final task = item.task;
 
                             return ListTile(
                               leading: Checkbox(
                                 value: task.isCompleted,
-                                onChanged: (_) => context
-                                    .read<TaskBoardCubit>()
-                                    .toggleTask(
-                                      task.id,
-                                      task.isCompleted,
-                                    ),
+                                onChanged: item.isSyncing
+                                    ? null
+                                    : (_) => context
+                                        .read<TaskBoardCubit>()
+                                        .toggleTask(
+                                          task.id,
+                                          task.isCompleted,
+                                        ),
                               ),
                               title: InkWell(
-                                onTap: () => _showTaskDialog(
-                                  context,
-                                  id: task.id,
-                                  initialTitle: task.title,
-                                ),
+                                onTap: item.isSyncing
+                                    ? null
+                                    : () => _showTaskDialog(
+                                          context,
+                                          id: task.id,
+                                          initialTitle: task.title,
+                                        ),
                                 child: Text(
                                   task.title,
                                   style: TextStyle(
                                     decoration: task.isCompleted
                                         ? TextDecoration.lineThrough
+                                        : null,
+                                    color: item.isSyncing
+                                        ? Colors.grey
                                         : null,
                                   ),
                                 ),
@@ -134,23 +139,34 @@ class TaskBoardScreen extends StatelessWidget {
                                   ...task.tags.map((tag) => InputChip(
                                         label: Text(tag,
                                             style: const TextStyle(fontSize: 10)),
-                                        onDeleted: () => context
-                                            .read<TaskBoardCubit>()
-                                            .onRemoveTag(task.id, tag),
+                                        onDeleted: item.isSyncing
+                                            ? null
+                                            : () => context
+                                                .read<TaskBoardCubit>()
+                                                .onRemoveTag(task.id, tag),
                                       )),
                                   ActionChip(
                                     label: const Icon(Icons.add, size: 14),
-                                    onPressed: () =>
-                                        _showAddTagDialog(context, task.id),
+                                    onPressed: item.isSyncing
+                                        ? null
+                                        : () => _showAddTagDialog(
+                                            context, task.id),
                                   ),
                                 ],
                               ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () => context
-                                    .read<TaskBoardCubit>()
-                                    .deleteTask(task.id),
-                              ),
+                              trailing: item.isSyncing
+                                  ? const SizedBox.square(
+                                      dimension: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : IconButton(
+                                      icon: const Icon(Icons.delete_outline),
+                                      onPressed: () => context
+                                          .read<TaskBoardCubit>()
+                                          .deleteTask(task.id),
+                                    ),
                             );
                           },
                         ),

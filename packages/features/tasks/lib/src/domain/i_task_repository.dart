@@ -1,3 +1,4 @@
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:signals_core/signals_core.dart';
 import 'task_record.dart';
 
@@ -11,6 +12,9 @@ abstract interface class ITaskRepository {
 
   /// Signal indicating if any mutation is in-flight.
   ReadonlySignal<bool> get isBusy;
+
+  /// Signal containing the set of IDs currently undergoing mutation.
+  ReadonlySignal<ISet<String>> get activeTaskIds;
 
   /// Appends a new task using the optimistic track.
   Future<void> createTask(String title);

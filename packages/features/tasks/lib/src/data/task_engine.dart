@@ -85,6 +85,9 @@ class TaskRepository implements ITaskRepository {
   ReadonlySignal<bool> get isBusy => _guard.busySignal;
 
   @override
+  ReadonlySignal<ISet<String>> get activeTaskIds => _guard.activeKeys;
+
+  @override
   Future<void> createTask(String title) async {
     final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
     final task = (

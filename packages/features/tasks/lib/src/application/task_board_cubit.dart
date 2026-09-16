@@ -5,14 +5,21 @@ import 'package:signals_core/signals_core.dart';
 import '../data/task_engine.dart';
 import '../domain/task_record.dart';
 
+/// View Model for an individual task item in the UI.
+typedef TaskItem = ({
+  Task task,
+  bool isSyncing,
+});
+
 /// Screen-scoped presentation state for the Task Board.
 typedef TaskBoardState = ({
-IList<Task> tasks,
-String? activeFilterTag,
-String searchQuery,
-String? isDeletingTaskId,
-bool hasSyncError,
-bool isBusy,
+  IList<TaskItem> tasks,
+  IList<String> availableTags,
+  String? activeFilterTag,
+  String searchQuery,
+  String? isDeletingTaskId,
+  bool hasSyncError,
+  bool isBusy,
 });
 
 /// The Visible Boundary: Screen-scoped facade that filters domain data,
@@ -22,16 +29,17 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
   TaskBoardCubit({required TaskRepository repository})
       : _repository = repository,
         super(
-        initialState: (
-        tasks: repository.tasks.value.lock,
-        activeFilterTag: null,
-        searchQuery: '',
-        isDeletingTaskId: null,
-        hasSyncError: repository.hasSyncError.value,
-        isBusy: repository.isBusy.value,
-        ),
-        equals: (prev, curr) => prev == curr, // Built-in Dart 3 deep record structural equality
-      ) {
+          initialState: (
+            tasks: IList(),
+            availableTags: IList(),
+            activeFilterTag: null,
+            searchQuery: '',
+            isDeletingTaskId: null,
+            hasSyncError: repository.hasSyncError.value,
+            isBusy: repository.isBusy.value,
+          ),
+          equals: (prev, curr) => prev == curr, // Built-in Dart 3 deep record structural equality
+        ) {
     _initFacade();
   }
 
@@ -44,22 +52,35 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
   void _initFacade() {
     final computedState = computed(() {
       final allTasks = _repository.tasks.value;
+      final activeIds = _repository.activeTaskIds.value;
       final filter = _activeFilterTag.value;
       final query = _searchQuery.value.toLowerCase();
 
+      // Derive all available tags from the task pool dynamically
+      final tagsSet = <String>{};
+      for (final task in allTasks) {
+        tagsSet.addAll(task.tags);
+      }
+      final sortedTags = tagsSet.toIList().sort();
+
+      // 1. Filter, 2. Map to View Model (TaskItem)
       final filteredTasks = allTasks.where((t) {
         final matchesTag = filter == null || t.tags.contains(filter);
         final matchesSearch = query.isEmpty || t.title.toLowerCase().contains(query);
         return matchesTag && matchesSearch;
-      }).toIList();
+      }).map((task) => (
+        task: task,
+        isSyncing: activeIds.contains(task.id),
+      )).toIList();
 
       return (
-      tasks: filteredTasks,
-      activeFilterTag: filter,
-      searchQuery: _searchQuery.value,
-      isDeletingTaskId: _isDeletingTaskId.value,
-      hasSyncError: _repository.hasSyncError.value,
-      isBusy: _repository.isBusy.value,
+        tasks: filteredTasks,
+        availableTags: sortedTags,
+        activeFilterTag: filter,
+        searchQuery: _searchQuery.value,
+        isDeletingTaskId: _isDeletingTaskId.value,
+        hasSyncError: _repository.hasSyncError.value,
+        isBusy: _repository.isBusy.value,
       );
     });
 
@@ -112,7 +133,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
   void toggleTask(String id, bool currentStatus) {
     unawaited(
       _repository.toggleTask(id, currentStatus).catchError(
-            (Object error, StackTrace st) {
+        (Object error, StackTrace st) {
           onError(error, st);
         },
       ),
