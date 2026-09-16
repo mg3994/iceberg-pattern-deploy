@@ -47,6 +47,15 @@ class RealTasksDao implements TasksDao {
   }
 
   @override
+  Future<void> updateTaskTitle(String id, String newTitle) async {
+    await (_db.update(_db.tasksTable)..where((t) => t.id.equals(id))).write(
+      TasksTableCompanion(
+        title: Value(newTitle),
+      ),
+    );
+  }
+
+  @override
   Future<void> deleteCloudTaskRow(String id) async {
     await (_db.delete(_db.tasksTable)..where((t) => t.id.equals(id))).go();
   }

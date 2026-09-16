@@ -50,6 +50,24 @@ class MockTaskDataSource implements RemoteTaskDataSource {
   }
 
   @override
+  Future<void> updateTaskTitle(String id, String newTitle) async {
+    // Simulate remote cloud write latency
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+
+    final index = _currentTasks.indexWhere((t) => t.id == id);
+    if (index != -1) {
+      final old = _currentTasks[index];
+      _currentTasks[index] = (
+        id: old.id,
+        title: newTitle,
+        isCompleted: old.isCompleted,
+        tags: old.tags,
+      );
+      _controller.add(List.from(_currentTasks));
+    }
+  }
+
+  @override
   Future<void> deleteTask(String id) async {
     // Simulate server deletion latency
     await Future<void>.delayed(const Duration(milliseconds: 800));

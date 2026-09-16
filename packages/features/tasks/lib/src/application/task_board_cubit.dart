@@ -71,6 +71,15 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
     }
   }
 
+  /// Updates a task title.
+  Future<void> onUpdateTitle(String id, String title) async {
+    try {
+      await _repository.updateTaskTitle(id, title);
+    } catch (error, stackTrace) {
+      onError(error, stackTrace);
+    }
+  }
+
   /// Dispatches optimistic toggle; forwards failure to onError for SnackBar display.
   void toggleTask(String id, bool currentStatus) {
     unawaited(

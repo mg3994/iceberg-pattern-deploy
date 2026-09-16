@@ -24,50 +24,52 @@ class TaskRepository implements ITaskRepository {
   // In-flight guard against rapid re-entrant toggles (DRY core primitive)
   final _guard = MutationGuard<String>();
 
-  // Private Reactive Graph with structural sharing
+  // Private Reactive Graph with structural sharing and single-pass optimization
   late final StreamSignal<List<Task>> _localStreamSignal;
-  final _optimisticPatches = signal<IMap<String, bool>>(IMap());
-  final _optimisticDeletions = signal<ISet<String>>(ISet());
+  final _optimisticPatches = signal<IMap<String, TaskPatch>>(IMap());
   final _optimisticCreations = signal<IList<Task>>(IList());
   final _hasSyncError = signal<bool>(false);
   late final Computed<List<Task>> _computedTasks;
   late final StreamSubscription<List<Task>> _remoteSyncSubscription;
 
   void _initEngine() {
-    // 1. Primary Ingress: Listen to the Local Database (Frame 0 Boot)
-    _localStreamSignal = streamSignal(
-      () => _localDataSource.taskStream,
-    );
+    _localStreamSignal = streamSignal(() => _localDataSource.taskStream);
 
-    // 2. Background Sync: Listen to Remote Cloud and pipe into Local DB
     _remoteSyncSubscription = _remoteDataSource.taskStream.listen((remoteTasks) {
       _localDataSource.syncRemoteData(remoteTasks);
     });
 
-    // 3. Unified Projection: Merge Local Stream + In-flight Patches + In-flight Deletions + In-flight Creations
     _computedTasks = computed(() {
       final localTasks = _localStreamSignal.value.value ?? const [];
-      final overrides = _optimisticPatches.value;
-      final deletions = _optimisticDeletions.value;
+      final patches = _optimisticPatches.value;
       final creations = _optimisticCreations.value;
 
-      final reconciled = localTasks.where((t) => !deletions.contains(t.id)).map((task) {
-        final patch = overrides[task.id];
-        return patch != null
-            ? (
-                id: task.id,
-                title: task.title,
-                isCompleted: patch,
-                tags: task.tags,
-              )
-            : task;
-      }).toList();
+      if (patches.isEmpty && creations.isEmpty) return localTasks;
+
+      // High-performance single-pass reconciliation via for-in loop (Best for Memory/GC)
+      final reconciled = <Task>[];
+      for (final task in localTasks) {
+        final patch = patches[task.id];
+        
+        // Skip items marked for deletion
+        if (patch?.isDeleted ?? false) continue;
+
+        if (patch != null) {
+          reconciled.add((
+            id: task.id,
+            title: patch.title ?? task.title,
+            isCompleted: patch.isCompleted ?? task.isCompleted,
+            tags: patch.tags ?? task.tags,
+          ));
+        } else {
+          reconciled.add(task);
+        }
+      }
 
       return reconciled + creations.toList();
     });
   }
 
-  // Public Readonly Boundary satisfying ITaskRepository
   @override
   ReadonlySignal<List<Task>> get tasks => _computedTasks;
 
@@ -77,7 +79,6 @@ class TaskRepository implements ITaskRepository {
   @override
   ReadonlySignal<bool> get isBusy => _guard.busySignal;
 
-  /// OPTIMISTIC CREATION: Appends task instantly, synchronizes with cloud in background.
   @override
   Future<void> createTask(String title) async {
     final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
@@ -92,19 +93,14 @@ class TaskRepository implements ITaskRepository {
       _optimisticCreations.value = _optimisticCreations.value.add(task);
 
       try {
-        // Step A: Update Local Persistence (Ideally with actual ID from server, but for mock we use this)
         await _localDataSource.createTask(task);
-
-        // Step B: Update Remote Cloud
         await _remoteDataSource.createTask(task);
 
-        // Reconcile atomically
         batch(() {
           _hasSyncError.value = false;
           _optimisticCreations.value = _optimisticCreations.value.remove(task);
         });
       } catch (error, stackTrace) {
-        // Rollback
         batch(() {
           _optimisticCreations.value = _optimisticCreations.value.remove(task);
           _hasSyncError.value = true;
@@ -117,29 +113,60 @@ class TaskRepository implements ITaskRepository {
     }).guardedBy(_guard, 'create_task');
   }
 
-  /// DUAL-TRACK MUTATION: Updates Local DB instantly, synchronizes with Cloud in background.
   @override
-  Future<void> toggleTask(String id, bool currentStatus) async {
-    final newStatus = !currentStatus;
-
+  Future<void> updateTaskTitle(String id, String newTitle) async {
     await (() async {
-      // Step A: Update memory patch (0ms track)
-      _optimisticPatches.value = _optimisticPatches.value.add(id, newStatus);
+      final oldPatch = _optimisticPatches.value[id];
+      _optimisticPatches.value = _optimisticPatches.value.add(id, (
+        title: newTitle,
+        isCompleted: oldPatch?.isCompleted,
+        tags: oldPatch?.tags,
+        isDeleted: oldPatch?.isDeleted,
+      ));
 
       try {
-        // Step B: Update Local Persistence
-        await _localDataSource.updateTask(id, newStatus);
+        await _localDataSource.updateTaskTitle(id, newTitle);
+        await _remoteDataSource.updateTaskTitle(id, newTitle);
 
-        // Step C: Update Remote Cloud
-        await _remoteDataSource.updateTask(id, newStatus);
-
-        // Reconcile atomically on success
         batch(() {
           _hasSyncError.value = false;
           _optimisticPatches.value = _optimisticPatches.value.remove(id);
         });
       } catch (error, stackTrace) {
-        // Rollback on failure
+        batch(() {
+          _optimisticPatches.value = _optimisticPatches.value.remove(id);
+          _hasSyncError.value = true;
+        });
+        Error.throwWithStackTrace(
+          SyncRollbackException('Failed to update task title. Reverted.', error),
+          stackTrace,
+        );
+      }
+    }).guardedBy(_guard, id);
+  }
+
+  @override
+  Future<void> toggleTask(String id, bool currentStatus) async {
+    final newStatus = !currentStatus;
+
+    await (() async {
+      final oldPatch = _optimisticPatches.value[id];
+      _optimisticPatches.value = _optimisticPatches.value.add(id, (
+        title: oldPatch?.title,
+        isCompleted: newStatus,
+        tags: oldPatch?.tags,
+        isDeleted: oldPatch?.isDeleted,
+      ));
+
+      try {
+        await _localDataSource.updateTask(id, newStatus);
+        await _remoteDataSource.updateTask(id, newStatus);
+
+        batch(() {
+          _hasSyncError.value = false;
+          _optimisticPatches.value = _optimisticPatches.value.remove(id);
+        });
+      } catch (error, stackTrace) {
         batch(() {
           _optimisticPatches.value = _optimisticPatches.value.remove(id);
           _hasSyncError.value = true;
@@ -152,29 +179,28 @@ class TaskRepository implements ITaskRepository {
     }).guardedBy(_guard, id);
   }
 
-  /// DUAL-TRACK MUTATION: Hides item locally, deletes remotely in background.
   @override
   Future<void> deleteTask(String id) async {
     await (() async {
-      // Step A: Update memory deletion set (0ms track)
-      _optimisticDeletions.value = _optimisticDeletions.value.add(id);
+      final oldPatch = _optimisticPatches.value[id];
+      _optimisticPatches.value = _optimisticPatches.value.add(id, (
+        title: oldPatch?.title,
+        isCompleted: oldPatch?.isCompleted,
+        tags: oldPatch?.tags,
+        isDeleted: true,
+      ));
 
       try {
-        // Step B: Update Local Persistence
         await _localDataSource.deleteTask(id);
-
-        // Step C: Update Remote Cloud
         await _remoteDataSource.deleteTask(id);
 
-        // Reconcile atomically on success
         batch(() {
           _hasSyncError.value = false;
-          _optimisticDeletions.value = _optimisticDeletions.value.remove(id);
+          _optimisticPatches.value = _optimisticPatches.value.remove(id);
         });
       } catch (error, stackTrace) {
-        // Rollback on failure (item reappears)
         batch(() {
-          _optimisticDeletions.value = _optimisticDeletions.value.remove(id);
+          _optimisticPatches.value = _optimisticPatches.value.remove(id);
           _hasSyncError.value = true;
         });
         Error.throwWithStackTrace(
@@ -191,7 +217,6 @@ class TaskRepository implements ITaskRepository {
     _guard.clear();
     _localStreamSignal.dispose();
     _optimisticPatches.dispose();
-    _optimisticDeletions.dispose();
     _optimisticCreations.dispose();
     _hasSyncError.dispose();
     _computedTasks.dispose();

@@ -8,8 +8,11 @@ abstract interface class RemoteTaskDataSource {
   /// Sends a raw creation update over the wire.
   Future<void> createTask(Task task);
 
-  /// Sends a raw mutation update over the wire.
+  /// Sends a raw mutation update for task completion status.
   Future<void> updateTask(String id, bool isCompleted);
+
+  /// Sends a raw mutation update for task title.
+  Future<void> updateTaskTitle(String id, String newTitle);
 
   /// Sends a raw deletion command over the wire.
   Future<void> deleteTask(String id);
@@ -25,6 +28,9 @@ abstract interface class LocalTaskDataSource {
 
   /// Updates a task record status locally.
   Future<void> updateTask(String id, bool isCompleted);
+
+  /// Updates a task title locally.
+  Future<void> updateTaskTitle(String id, String newTitle);
 
   /// Deletes a task record locally.
   Future<void> deleteTask(String id);

@@ -99,12 +99,19 @@ class TaskBoardScreen extends StatelessWidget {
                                       task.isCompleted,
                                     ),
                               ),
-                              title: Text(
-                                task.title,
-                                style: TextStyle(
-                                  decoration: task.isCompleted
-                                      ? TextDecoration.lineThrough
-                                      : null,
+                              title: InkWell(
+                                onTap: () => _showTaskDialog(
+                                  context,
+                                  id: task.id,
+                                  initialTitle: task.title,
+                                ),
+                                child: Text(
+                                  task.title,
+                                  style: TextStyle(
+                                    decoration: task.isCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
                                 ),
                               ),
                               subtitle: task.tags.isEmpty
@@ -123,7 +130,7 @@ class TaskBoardScreen extends StatelessWidget {
               ],
             ),
             floatingActionButton: FloatingActionButton(
-              onPressed: () => _showAddTaskDialog(context),
+              onPressed: () => _showTaskDialog(context),
               tooltip: 'Add Task',
               child: const Icon(Icons.add),
             ),
@@ -133,13 +140,19 @@ class TaskBoardScreen extends StatelessWidget {
     );
   }
 
-  void _showAddTaskDialog(BuildContext context) {
-    final controller = TextEditingController();
+  void _showTaskDialog(
+    BuildContext context, {
+    String? id,
+    String initialTitle = '',
+  }) {
+    final controller = TextEditingController(text: initialTitle);
+    final isEditing = id != null;
+
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('New Task'),
+          title: Text(isEditing ? 'Edit Task' : 'New Task'),
           content: TextField(
             controller: controller,
             autofocus: true,
@@ -156,11 +169,15 @@ class TaskBoardScreen extends StatelessWidget {
               onPressed: () {
                 final title = controller.text.trim();
                 if (title.isNotEmpty) {
-                  context.read<TaskBoardCubit>().onCreateTask(title);
+                  if (isEditing) {
+                    context.read<TaskBoardCubit>().onUpdateTitle(id, title);
+                  } else {
+                    context.read<TaskBoardCubit>().onCreateTask(title);
+                  }
                 }
                 Navigator.of(dialogContext).pop();
               },
-              child: const Text('Add'),
+              child: Text(isEditing ? 'Save' : 'Add'),
             ),
           ],
         );

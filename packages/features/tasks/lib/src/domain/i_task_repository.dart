@@ -15,10 +15,13 @@ abstract interface class ITaskRepository {
   /// Appends a new task using the optimistic track.
   Future<void> createTask(String title);
 
-  /// Triggers an optimistic state switch.
+  /// Updates a task title using the optimistic track.
+  Future<void> updateTaskTitle(String id, String newTitle);
+
+  /// Triggers an optimistic state switch for task completion.
   Future<void> toggleTask(String id, bool currentStatus);
 
-  /// Triggers a pessimistic item eviction.
+  /// Triggers an optimistic item eviction.
   Future<void> deleteTask(String id);
 
   /// Disposes active stream dependencies.
