@@ -31,12 +31,13 @@ class MockTaskDataSource implements RemoteTaskDataSource {
     // Simulate remote cloud write latency
     await Future<void>.delayed(const Duration(milliseconds: 600));
 
-    // Intentionally fail sync for task 3 to demonstrate optimistic UI rollback
-    if (id == '3') {
+    final index = _currentTasks.indexWhere((t) => t.id == id);
+
+    // Intentionally fail sync if title contains 'Error' or it's hardcoded task 3
+    if (id == '3' || (index != -1 && _currentTasks[index].title.contains('Error'))) {
       throw Exception('Cloud server write failure');
     }
 
-    final index = _currentTasks.indexWhere((t) => t.id == id);
     if (index != -1) {
       final old = _currentTasks[index];
       _currentTasks[index] = (
@@ -53,6 +54,11 @@ class MockTaskDataSource implements RemoteTaskDataSource {
   Future<void> updateTaskTitle(String id, String newTitle) async {
     // Simulate remote cloud write latency
     await Future<void>.delayed(const Duration(milliseconds: 600));
+
+    // Intentionally fail sync if title contains 'Error'
+    if (newTitle.contains('Error')) {
+      throw Exception('Cloud server update failure');
+    }
 
     final index = _currentTasks.indexWhere((t) => t.id == id);
     if (index != -1) {

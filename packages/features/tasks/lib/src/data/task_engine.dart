@@ -48,7 +48,9 @@ class TaskRepository implements ITaskRepository {
 
       // High-performance single-pass reconciliation via for-in loop (Best for Memory/GC)
       final reconciled = <Task>[];
+      final localIds = <String>{};
       for (final task in localTasks) {
+        localIds.add(task.id);
         final patch = patches[task.id];
         
         // Skip items marked for deletion
@@ -66,7 +68,10 @@ class TaskRepository implements ITaskRepository {
         }
       }
 
-      return reconciled + creations.toList();
+      // Filter out creations that have already materialized in the local stream
+      final uniqueCreations = creations.where((t) => !localIds.contains(t.id));
+
+      return reconciled + uniqueCreations.toList();
     });
   }
 
