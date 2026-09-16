@@ -55,18 +55,6 @@ class DriftTaskDataSource implements source.LocalTaskDataSource {
   }
 
   @override
-  Future<void> Future_void_syncRemoteData(List<Task> remoteTasks) async { // Oops, let me fix the method name
-    final dbRows = remoteTasks.map((t) => (
-      id: t.id,
-      title: t.title,
-      isCompleted: t.isCompleted,
-      serializedTags: t.tags.join(','),
-    )).toList();
-
-    await _dao.upsertTasks(dbRows);
-  }
-  
-  @override
   Future<void> syncRemoteData(List<Task> remoteTasks) async {
     final dbRows = remoteTasks.map((t) => (
       id: t.id,
