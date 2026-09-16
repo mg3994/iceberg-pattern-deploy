@@ -11,10 +11,18 @@ typedef TaskItem = ({
   bool isSyncing,
 });
 
+/// Aggregate statistics derived from the task pool.
+typedef TaskStats = ({
+  int total,
+  int completed,
+  int visible,
+});
+
 /// Screen-scoped presentation state for the Task Board.
 typedef TaskBoardState = ({
   IList<TaskItem> tasks,
   IList<String> availableTags,
+  TaskStats stats,
   String? activeFilterTag,
   String searchQuery,
   String? isDeletingTaskId,
@@ -32,6 +40,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
           initialState: (
             tasks: IList(),
             availableTags: IList(),
+            stats: (total: 0, completed: 0, visible: 0),
             activeFilterTag: null,
             searchQuery: '',
             isDeletingTaskId: null,
@@ -47,6 +56,8 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
   final _activeFilterTag = signal<String?>(null);
   final _searchQuery = signal<String>('');
   final _isDeletingTaskId = signal<String?>(null);
+  
+  Timer? _debounceTimer;
   late final void Function() _disposeEffect;
 
   void _initFacade() {
@@ -58,8 +69,10 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
 
       // Derive all available tags from the task pool dynamically
       final tagsSet = <String>{};
+      int completedCount = 0;
       for (final task in allTasks) {
         tagsSet.addAll(task.tags);
+        if (task.isCompleted) completedCount++;
       }
       final sortedTags = tagsSet.toIList().sort();
 
@@ -76,6 +89,11 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
       return (
         tasks: filteredTasks,
         availableTags: sortedTags,
+        stats: (
+          total: allTasks.length,
+          completed: completedCount,
+          visible: filteredTasks.length,
+        ),
         activeFilterTag: filter,
         searchQuery: _searchQuery.value,
         isDeletingTaskId: _isDeletingTaskId.value,
@@ -90,8 +108,13 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
   /// Updates the active category/tag filter.
   void setFilterTag(String? tag) => _activeFilterTag.value = tag;
 
-  /// Updates the search query.
-  void setSearchQuery(String query) => _searchQuery.value = query;
+  /// Updates the search query with a 300ms debounce.
+  void setSearchQuery(String query) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      _searchQuery.value = query;
+    });
+  }
 
   /// Creates a new task.
   Future<void> onCreateTask(String title) async {
@@ -152,6 +175,7 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
   @override
   Future<void> close() async {
     _disposeEffect();
+    _debounceTimer?.cancel();
     _activeFilterTag.dispose();
     _searchQuery.dispose();
     _isDeletingTaskId.dispose();

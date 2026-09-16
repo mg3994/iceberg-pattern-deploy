@@ -67,6 +67,27 @@ class TaskBoardScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Showing ${state.stats.visible} of ${state.stats.total} tasks',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${state.stats.completed} completed',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.teal[700],
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -94,7 +115,7 @@ class TaskBoardScreen extends StatelessWidget {
                 ),
                 Expanded(
                   child: state.tasks.isEmpty
-                      ? const Center(child: Text('No tasks found'))
+                      ? _buildEmptyState(context, state)
                       : ListView.builder(
                           itemCount: state.tasks.length,
                           itemBuilder: (context, index) {
@@ -180,6 +201,39 @@ class TaskBoardScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, TaskBoardState state) {
+    final hasFilter = state.activeFilterTag != null || state.searchQuery.isNotEmpty;
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: .center,
+        children: [
+          Icon(
+            hasFilter ? Icons.search_off : Icons.task_alt,
+            size: 64,
+            color: Colors.grey[300],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            hasFilter ? 'No tasks match your criteria' : 'Your task board is empty',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.grey[600],
+                ),
+          ),
+          if (hasFilter)
+            TextButton(
+              onPressed: () {
+                final cubit = context.read<TaskBoardCubit>();
+                cubit.setFilterTag(null);
+                cubit.setSearchQuery('');
+              },
+              child: const Text('Clear all filters'),
+            ),
+        ],
       ),
     );
   }
