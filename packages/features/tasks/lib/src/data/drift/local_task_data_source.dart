@@ -71,7 +71,7 @@ class DriftTaskDataSource implements source.LocalTaskDataSource {
             ))
         .toList();
 
-    await _dao.replaceTableContent(dbRows);
+    await _dao.upsertTasks(dbRows);
   }
 
   Task _mapRowToTask(TaskDbData row) {

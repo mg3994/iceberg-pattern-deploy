@@ -34,12 +34,9 @@ class MockTaskDataSource implements RemoteTaskDataSource {
 
   @override
   Future<void> updateTask(String id, bool isCompleted) async {
-    // Simulate remote cloud write latency
     await Future<void>.delayed(const Duration(milliseconds: 600));
 
     final index = _currentTasks.indexWhere((t) => t.id == id);
-
-    // Intentionally fail sync if title contains 'Error' or it's hardcoded task 3
     if (id == '3' || (index != -1 && _currentTasks[index].title.contains('Error'))) {
       throw Exception('Cloud server write failure');
     }
@@ -61,10 +58,8 @@ class MockTaskDataSource implements RemoteTaskDataSource {
 
   @override
   Future<void> updateTaskTitle(String id, String newTitle) async {
-    // Simulate remote cloud write latency
     await Future<void>.delayed(const Duration(milliseconds: 600));
 
-    // Intentionally fail sync if title contains 'Error'
     if (newTitle.contains('Error')) {
       throw Exception('Cloud server update failure');
     }
@@ -87,16 +82,13 @@ class MockTaskDataSource implements RemoteTaskDataSource {
 
   @override
   Future<void> updateTaskTags(String id, IList<String> tags) async {
-    // Simulate remote cloud write latency
     await Future<void>.delayed(const Duration(milliseconds: 600));
 
-    final index = _currentTasks.indexWhere((t) => t.id == id);
-
-    // Intentionally fail sync if any tag is 'Error'
     if (tags.contains('Error')) {
       throw Exception('Cloud server tags update failure');
     }
 
+    final index = _currentTasks.indexWhere((t) => t.id == id);
     if (index != -1) {
       final old = _currentTasks[index];
       _currentTasks[index] = (
@@ -114,14 +106,14 @@ class MockTaskDataSource implements RemoteTaskDataSource {
 
   @override
   Future<void> deleteTask(String id) async {
-    // Simulate server deletion latency
     await Future<void>.delayed(const Duration(milliseconds: 800));
     _currentTasks.removeWhere((t) => t.id == id);
     _controller.add(List.from(_currentTasks));
   }
 
-  /// Pushes the initial state snapshot to cold subscribers.
   void primeChannel() {
-    _controller.add(List.from(_currentTasks));
+    if (_currentTasks.isNotEmpty) {
+      _controller.add(List.from(_currentTasks));
+    }
   }
 }

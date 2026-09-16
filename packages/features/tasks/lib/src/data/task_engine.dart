@@ -9,6 +9,10 @@ import 'task_data_source.dart';
 /// The Submerged Engine: High-availability dual-track synchronization.
 /// Uses the local database as a persistent intent log to survive app restarts.
 class TaskRepository implements ITaskRepository {
+  final RemoteTaskDataSource _remoteDataSource;
+  final LocalTaskDataSource _localDataSource;
+  final ConnectivityService _connectivity;
+
   TaskRepository({
     required RemoteTaskDataSource remoteDataSource,
     required LocalTaskDataSource localDataSource,
@@ -19,17 +23,13 @@ class TaskRepository implements ITaskRepository {
     _initEngine();
   }
 
-  final RemoteTaskDataSource _remoteDataSource;
-  final LocalTaskDataSource _localDataSource;
-  final ConnectivityService _connectivity;
-
   // In-flight guard against rapid re-entrant toggles
   final _guard = MutationGuard<String>();
 
   // Private Reactive Graph with persistent intent and single-pass optimization
   late final StreamSignal<List<Task>> _localStreamSignal;
   final _optimisticPatches = signal<IMap<String, TaskPatch>>(IMap());
-  final _optimisticCreations = signal<IList<Task>>(IList());
+  final _optimisticCreations = signal<IMap<String, Task>>(IMap());
   final _hasSyncError = signal<bool>(false);
   late final Computed<List<Task>> _computedTasks;
   late final StreamSubscription<List<Task>> _remoteSyncSubscription;
@@ -77,49 +77,63 @@ class TaskRepository implements ITaskRepository {
         }
       }
 
-      // Filter out creations that have already materialized in the local stream
-      final uniqueCreations = creations.where((t) => !localIds.contains(t.id));
+      // Add creations that haven't appeared in local stream yet
+      for (final task in creations.values) {
+        if (!localIds.contains(task.id)) {
+          reconciled.add(task);
+        }
+      }
 
-      return reconciled + uniqueCreations.toList();
+      return reconciled;
     });
 
     // 🌊 PATCH GARBAGE COLLECTOR: Eliminates UI Flicker
-    // Automatically removes optimistic patches once they are acknowledged (ACKed) by the local stream.
     final gcEffect = effect(() {
       final localTasks = _localStreamSignal.value.value;
       if (localTasks == null) return;
 
       final patches = _optimisticPatches.value;
-      if (patches.isEmpty) return;
+      final creations = _optimisticCreations.value;
+      if (patches.isEmpty && creations.isEmpty) return;
 
       final localMap = {for (var t in localTasks) t.id: t};
-      Map<String, TaskPatch>? updatedMap;
-        
-      for (final entry in patches.entries) {
-        final id = entry.key;
-        final patch = entry.value;
-        final localTask = localMap[id];
 
-        bool isAcked = false;
-        if (patch.isDeleted == true) {
-          isAcked = localTask == null;
-        } else {
-          if (localTask != null) {
+      // 1. Clean Patches
+      if (patches.isNotEmpty) {
+        Map<String, TaskPatch>? updatedPatches;
+        for (final entry in patches.entries) {
+          final id = entry.key;
+          final patch = entry.value;
+          final localTask = localMap[id];
+
+          bool isAcked = false;
+          if (patch.isDeleted == true) {
+            isAcked = localTask == null;
+          } else if (localTask != null) {
             final matchesTitle = patch.title == null || localTask.title == patch.title;
             final matchesStatus = patch.isCompleted == null || localTask.isCompleted == patch.isCompleted;
             final matchesTags = patch.tags == null || localTask.tags == patch.tags;
             isAcked = matchesTitle && matchesStatus && matchesTags;
           }
-        }
 
-        if (isAcked) {
-          updatedMap ??= Map.from(patches.unlock);
-          updatedMap.remove(id);
+          if (isAcked) {
+            updatedPatches ??= Map.from(patches.unlock);
+            updatedPatches.remove(id);
+          }
         }
+        if (updatedPatches != null) _optimisticPatches.value = updatedPatches.lock;
       }
 
-      if (updatedMap != null) {
-        _optimisticPatches.value = updatedMap.lock;
+      // 2. Clean Creations
+      if (creations.isNotEmpty) {
+        Map<String, Task>? updatedCreations;
+        for (final id in creations.keys) {
+          if (localMap.containsKey(id)) {
+            updatedCreations ??= Map.from(creations.unlock);
+            updatedCreations.remove(id);
+          }
+        }
+        if (updatedCreations != null) _optimisticCreations.value = updatedCreations.lock;
       }
     });
 
@@ -128,12 +142,10 @@ class TaskRepository implements ITaskRepository {
       final isOnline = _connectivity.status.value == ConnectivityStatus.online;
       
       if (isOnline) {
-        // Start worker when online
         _syncQueueTimer?.cancel();
         _syncQueueTimer = Timer.periodic(const Duration(seconds: 10), (_) => _processSyncQueue());
         unawaited(_processSyncQueue());
       } else {
-        // Stop worker when offline to save battery/resources
         _syncQueueTimer?.cancel();
         _syncQueueTimer = null;
       }
@@ -163,7 +175,6 @@ class TaskRepository implements ITaskRepository {
   @override
   Future<void> triggerSyncManual() => _processSyncQueue();
 
-  /// Background Worker: Scans Drift intent log and attempts cloud reconciliation.
   Future<void> _processSyncQueue() async {
     if (_connectivity.status.value == ConnectivityStatus.offline) return;
 
@@ -191,8 +202,9 @@ class TaskRepository implements ITaskRepository {
 
   @override
   Future<void> createTask(String title) async {
+    final id = 'task_${DateTime.now().millisecondsSinceEpoch}';
     final task = (
-      id: 'task_${DateTime.now().millisecondsSinceEpoch}',
+      id: id,
       title: title,
       isCompleted: false,
       tags: const IListConst<String>([]),
@@ -202,11 +214,10 @@ class TaskRepository implements ITaskRepository {
     );
 
     await (() async {
-      _optimisticCreations.value = _optimisticCreations.value.add(task);
+      _optimisticCreations.value = _optimisticCreations.value.add(id, task);
 
       try {
         await _localDataSource.createTask(task);
-        _optimisticCreations.value = _optimisticCreations.value.remove(task);
 
         if (_connectivity.isOnline) {
           await _remoteDataSource.createTask(task);
@@ -216,12 +227,11 @@ class TaskRepository implements ITaskRepository {
       } catch (error, stackTrace) {
         await _localDataSource.updateTask(task.id, false, TaskSyncStatus.error, error.toString());
         batch(() {
-          _optimisticCreations.value = _optimisticCreations.value.remove(task);
           _hasSyncError.value = true;
         });
         Error.throwWithStackTrace(SyncRollbackException('Create failed. Logged for retry.', error), stackTrace);
       }
-    }).guardedBy(_guard, task.id);
+    }).guardedBy(_guard, id);
   }
 
   @override
@@ -245,7 +255,6 @@ class TaskRepository implements ITaskRepository {
       } catch (error) {
         await _localDataSource.updateTaskTitle(id, newTitle, TaskSyncStatus.error, error.toString());
         batch(() {
-          _optimisticPatches.value = _optimisticPatches.value.remove(id);
           _hasSyncError.value = true;
         });
       }
@@ -276,7 +285,6 @@ class TaskRepository implements ITaskRepository {
       } catch (error) {
         await _localDataSource.updateTaskTags(id, nextTags, TaskSyncStatus.error, error.toString());
         batch(() {
-          _optimisticPatches.value = _optimisticPatches.value.remove(id);
           _hasSyncError.value = true;
         });
       }
@@ -307,7 +315,6 @@ class TaskRepository implements ITaskRepository {
       } catch (error) {
         await _localDataSource.updateTaskTags(id, nextTags, TaskSyncStatus.error, error.toString());
         batch(() {
-          _optimisticPatches.value = _optimisticPatches.value.remove(id);
           _hasSyncError.value = true;
         });
       }
@@ -337,7 +344,6 @@ class TaskRepository implements ITaskRepository {
       } catch (error) {
         await _localDataSource.updateTask(id, newStatus, TaskSyncStatus.error, error.toString());
         batch(() {
-          _optimisticPatches.value = _optimisticPatches.value.remove(id);
           _hasSyncError.value = true;
         });
       }
@@ -361,7 +367,6 @@ class TaskRepository implements ITaskRepository {
         await _localDataSource.deleteTask(id);
       } catch (error) {
         batch(() {
-          _optimisticPatches.value = _optimisticPatches.value.remove(id);
           _hasSyncError.value = true;
         });
       }

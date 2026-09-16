@@ -1,5 +1,6 @@
 import 'package:bloc_signals_flutter/bloc_signals_flutter.dart';
 import 'package:core/core.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
 import 'package:infrastructure/infrastructure.dart';
 import 'package:tasks/tasks.dart';
@@ -15,17 +16,27 @@ void main() {
   // Initialize Tier 1 Datastores
   final localDataSource = DriftTaskDataSource(dao: tasksDao);
   
-  // Initialize with EMPTY remote to demonstrate cloud-to-local sync
-  final remoteDataSource = MockTaskDataSource([]);
+  // Initialize with initial data to prevent empty-wipe issues on first boot
+  final remoteDataSource = MockTaskDataSource([
+    (
+      id: 'task_1',
+      title: 'Welcome to the Smart Iceberg!',
+      isCompleted: false,
+      tags: const IListConst(['getting-started']),
+      createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
+      syncStatus: TaskSyncStatus.synced,
+      lastErrorMessage: null,
+    ),
+  ]);
 
-  // Initialize Tier 2 Submerged Engine (Connectivity-Aware)
+  // Initialize Tier 2 Submerged Engine
   final repository = TaskRepository(
     localDataSource: localDataSource,
     remoteDataSource: remoteDataSource,
     connectivity: connectivity,
   );
 
-  // Prime the remote simulation channel (starts empty)
+  // Prime the remote simulation channel
   remoteDataSource.primeChannel();
 
   runApp(
