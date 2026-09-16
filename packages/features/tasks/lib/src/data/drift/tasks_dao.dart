@@ -22,6 +22,9 @@ abstract interface class TasksDao {
   /// Updates a task title using strict compile-time types.
   Future<void> updateTaskTitle(String id, String newTitle);
 
+  /// Updates task tags using strict compile-time types.
+  Future<void> updateTaskTags(String id, String serializedTags);
+
   /// Evicts a task row using explicit key parameters.
   Future<void> deleteCloudTaskRow(String id);
 

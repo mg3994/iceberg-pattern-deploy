@@ -18,6 +18,12 @@ abstract interface class ITaskRepository {
   /// Updates a task title using the optimistic track.
   Future<void> updateTaskTitle(String id, String newTitle);
 
+  /// Adds a tag to a task using the optimistic track.
+  Future<void> addTag(String id, String tag);
+
+  /// Removes a tag from a task using the optimistic track.
+  Future<void> removeTag(String id, String tag);
+
   /// Triggers an optimistic state switch for task completion.
   Future<void> toggleTask(String id, bool currentStatus);
 

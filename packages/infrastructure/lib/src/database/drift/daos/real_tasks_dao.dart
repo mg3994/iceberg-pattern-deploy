@@ -56,6 +56,15 @@ class RealTasksDao implements TasksDao {
   }
 
   @override
+  Future<void> updateTaskTags(String id, String serializedTags) async {
+    await (_db.update(_db.tasksTable)..where((t) => t.id.equals(id))).write(
+      TasksTableCompanion(
+        serializedTags: Value(serializedTags),
+      ),
+    );
+  }
+
+  @override
   Future<void> deleteCloudTaskRow(String id) async {
     await (_db.delete(_db.tasksTable)..where((t) => t.id.equals(id))).go();
   }

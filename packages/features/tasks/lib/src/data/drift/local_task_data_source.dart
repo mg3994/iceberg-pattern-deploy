@@ -50,6 +50,11 @@ class DriftTaskDataSource implements source.LocalTaskDataSource {
   }
 
   @override
+  Future<void> updateTaskTags(String id, IList<String> tags) async {
+    await _dao.updateTaskTags(id, tags.join(','));
+  }
+
+  @override
   Future<void> deleteTask(String id) async {
     await _dao.deleteCloudTaskRow(id);
   }

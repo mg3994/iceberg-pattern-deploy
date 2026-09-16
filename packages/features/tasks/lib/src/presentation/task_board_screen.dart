@@ -114,9 +114,23 @@ class TaskBoardScreen extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              subtitle: task.tags.isEmpty
-                                  ? null
-                                  : Text(task.tags.join(', ')),
+                              subtitle: Wrap(
+                                spacing: 4,
+                                children: [
+                                  ...task.tags.map((tag) => InputChip(
+                                        label: Text(tag,
+                                            style: const TextStyle(fontSize: 10)),
+                                        onDeleted: () => context
+                                            .read<TaskBoardCubit>()
+                                            .onRemoveTag(task.id, tag),
+                                      )),
+                                  ActionChip(
+                                    label: const Icon(Icons.add, size: 14),
+                                    onPressed: () =>
+                                        _showAddTagDialog(context, task.id),
+                                  ),
+                                ],
+                              ),
                               trailing: IconButton(
                                 icon: const Icon(Icons.delete_outline),
                                 onPressed: () => context
@@ -178,6 +192,41 @@ class TaskBoardScreen extends StatelessWidget {
                 Navigator.of(dialogContext).pop();
               },
               child: Text(isEditing ? 'Save' : 'Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showAddTagDialog(BuildContext context, String taskId) {
+    final controller = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Add Tag'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Enter tag name...',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final tag = controller.text.trim();
+                if (tag.isNotEmpty) {
+                  context.read<TaskBoardCubit>().onAddTag(taskId, tag);
+                }
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Add'),
             ),
           ],
         );

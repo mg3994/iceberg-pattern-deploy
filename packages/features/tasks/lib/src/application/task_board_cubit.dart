@@ -80,6 +80,24 @@ class TaskBoardCubit extends CubitSignal<TaskBoardState> {
     }
   }
 
+  /// Adds a tag to a task.
+  Future<void> onAddTag(String id, String tag) async {
+    try {
+      await _repository.addTag(id, tag);
+    } catch (error, stackTrace) {
+      onError(error, stackTrace);
+    }
+  }
+
+  /// Removes a tag from a task.
+  Future<void> onRemoveTag(String id, String tag) async {
+    try {
+      await _repository.removeTag(id, tag);
+    } catch (error, stackTrace) {
+      onError(error, stackTrace);
+    }
+  }
+
   /// Dispatches optimistic toggle; forwards failure to onError for SnackBar display.
   void toggleTask(String id, bool currentStatus) {
     unawaited(

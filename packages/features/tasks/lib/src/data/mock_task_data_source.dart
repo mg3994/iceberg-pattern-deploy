@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import '../domain/task_record.dart';
 import 'task_data_source.dart';
 
@@ -68,6 +69,30 @@ class MockTaskDataSource implements RemoteTaskDataSource {
         title: newTitle,
         isCompleted: old.isCompleted,
         tags: old.tags,
+      );
+      _controller.add(List.from(_currentTasks));
+    }
+  }
+
+  @override
+  Future<void> updateTaskTags(String id, IList<String> tags) async {
+    // Simulate remote cloud write latency
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+
+    final index = _currentTasks.indexWhere((t) => t.id == id);
+
+    // Intentionally fail sync if any tag is 'Error'
+    if (tags.contains('Error')) {
+      throw Exception('Cloud server tags update failure');
+    }
+
+    if (index != -1) {
+      final old = _currentTasks[index];
+      _currentTasks[index] = (
+        id: old.id,
+        title: old.title,
+        isCompleted: old.isCompleted,
+        tags: tags,
       );
       _controller.add(List.from(_currentTasks));
     }

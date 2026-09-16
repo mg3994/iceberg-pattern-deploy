@@ -151,6 +151,80 @@ class TaskRepository implements ITaskRepository {
   }
 
   @override
+  Future<void> addTag(String id, String tag) async {
+    await (() async {
+      final currentTask = _computedTasks.value.firstWhere((t) => t.id == id);
+      if (currentTask.tags.contains(tag)) return;
+      
+      final nextTags = currentTask.tags.add(tag);
+      final oldPatch = _optimisticPatches.value[id];
+      
+      _optimisticPatches.value = _optimisticPatches.value.add(id, (
+        title: oldPatch?.title,
+        isCompleted: oldPatch?.isCompleted,
+        tags: nextTags,
+        isDeleted: oldPatch?.isDeleted,
+      ));
+
+      try {
+        await _localDataSource.updateTaskTags(id, nextTags);
+        await _remoteDataSource.updateTaskTags(id, nextTags);
+
+        batch(() {
+          _hasSyncError.value = false;
+          _optimisticPatches.value = _optimisticPatches.value.remove(id);
+        });
+      } catch (error, stackTrace) {
+        batch(() {
+          _optimisticPatches.value = _optimisticPatches.value.remove(id);
+          _hasSyncError.value = true;
+        });
+        Error.throwWithStackTrace(
+          SyncRollbackException('Failed to add tag. Reverted.', error),
+          stackTrace,
+        );
+      }
+    }).guardedBy(_guard, id);
+  }
+
+  @override
+  Future<void> removeTag(String id, String tag) async {
+    await (() async {
+      final currentTask = _computedTasks.value.firstWhere((t) => t.id == id);
+      if (!currentTask.tags.contains(tag)) return;
+      
+      final nextTags = currentTask.tags.remove(tag);
+      final oldPatch = _optimisticPatches.value[id];
+      
+      _optimisticPatches.value = _optimisticPatches.value.add(id, (
+        title: oldPatch?.title,
+        isCompleted: oldPatch?.isCompleted,
+        tags: nextTags,
+        isDeleted: oldPatch?.isDeleted,
+      ));
+
+      try {
+        await _localDataSource.updateTaskTags(id, nextTags);
+        await _remoteDataSource.updateTaskTags(id, nextTags);
+
+        batch(() {
+          _hasSyncError.value = false;
+          _optimisticPatches.value = _optimisticPatches.value.remove(id);
+        });
+      } catch (error, stackTrace) {
+        batch(() {
+          _optimisticPatches.value = _optimisticPatches.value.remove(id);
+          _hasSyncError.value = true;
+        });
+        Error.throwWithStackTrace(
+          SyncRollbackException('Failed to remove tag. Reverted.', error),
+          stackTrace,
+        );
+      }
+    }).guardedBy(_guard, id);
+  }
+
+  @override
   Future<void> toggleTask(String id, bool currentStatus) async {
     final newStatus = !currentStatus;
 
