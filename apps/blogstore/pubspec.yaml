@@ -41,6 +41,8 @@ dependencies:
     path: ../../packages/core
   tasks:
     path: ../../packages/features/tasks
+  infrastructure:
+    path: ../../packages/infrastructure
 
 dev_dependencies:
   flutter_test:

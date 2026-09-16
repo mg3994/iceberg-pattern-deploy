@@ -1,6 +1,7 @@
 import 'package:bloc_signals_flutter/bloc_signals_flutter.dart';
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
+import 'package:infrastructure/infrastructure.dart';
 import 'package:tasks/tasks.dart';
 
 void main() {
@@ -25,17 +26,22 @@ void main() {
     ),
   ];
 
-  // Initialize Tier 1 Datastore
-  final dataSource = MockTaskDataSource(initialTasks);
+  // Initialize Physical Persistence
+  final db = AppDatabase();
+  final tasksDao = RealTasksDao(database: db);
 
-  // Initialize Tier 2 Submerged Engine
+  // Initialize Tier 1 Datastores
+  final localDataSource = DriftTaskDataSource(dao: tasksDao);
+  final remoteDataSource = MockTaskDataSource(initialTasks);
+
+  // Initialize Tier 2 Submerged Engine (Dual-Track Sync)
   final repository = TaskRepository(
-    dataSource: dataSource,
-    initialTasks: initialTasks,
+    localDataSource: localDataSource,
+    remoteDataSource: remoteDataSource,
   );
 
-  // Prime the initial mock snapshot channel
-  dataSource.primeChannel();
+  // Prime the remote simulation channel
+  remoteDataSource.primeChannel();
 
   runApp(
     IcebergPatternApp(

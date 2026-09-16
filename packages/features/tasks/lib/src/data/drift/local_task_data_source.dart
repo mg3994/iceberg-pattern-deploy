@@ -1,13 +1,13 @@
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import '../../domain/task_record.dart';
-import '../task_data_source.dart';
+import '../task_data_source.dart' as source;
 import 'tasks_dao.dart';
 
 /// Production Relational Storage implementation mapping clean typed DAO queries to domain entities.
-class LocalTaskDataSource implements TaskDataSource {
+class DriftTaskDataSource implements source.LocalTaskDataSource {
   final TasksDao _dao;
 
-  LocalTaskDataSource({
+  DriftTaskDataSource({
     required TasksDao dao,
   }) : _dao = dao;
 
@@ -37,5 +37,17 @@ class LocalTaskDataSource implements TaskDataSource {
   @override
   Future<void> deleteTask(String id) async {
     await _dao.deleteCloudTaskRow(id);
+  }
+
+  @override
+  Future<void> syncRemoteData(List<Task> remoteTasks) async {
+    final dbRows = remoteTasks.map((t) => (
+      id: t.id,
+      title: t.title,
+      isCompleted: t.isCompleted,
+      serializedTags: t.tags.join(','),
+    )).toList();
+
+    await _dao.upsertTasks(dbRows);
   }
 }

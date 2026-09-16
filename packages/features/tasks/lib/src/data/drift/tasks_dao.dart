@@ -18,4 +18,7 @@ abstract interface class TasksDao {
 
   /// Evicts a task row using explicit key parameters.
   Future<void> deleteCloudTaskRow(String id);
+
+  /// Bulk upserts tasks into the local database (Synchronizes Cloud -> Local).
+  Future<void> upsertTasks(List<TaskDbData> tasks);
 }

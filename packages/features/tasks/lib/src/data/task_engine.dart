@@ -6,43 +6,52 @@ import '../domain/task_record.dart';
 import '../domain/i_task_repository.dart';
 import 'task_data_source.dart';
 
-/// The Submerged Engine: Quarantines raw asynchronous cloud streams into a
-/// synchronous, cached reactive graph and handles optimistic reconciliation.
+/// The Submerged Engine: Dual-track synchronization between Local Drift and Remote Cloud.
+/// This engine fulfills the "Stale-While-Revalidate" pattern by booting from local cache
+/// and refreshing from the cloud in the background.
 class TaskRepository implements ITaskRepository {
-  final TaskDataSource _dataSource;
+  final RemoteTaskDataSource _remoteDataSource;
+  final LocalTaskDataSource _localDataSource;
 
   TaskRepository({
-    required TaskDataSource dataSource,
-    List<Task> initialTasks = const [],
-  }) : _dataSource = dataSource {
-    _initEngine(initialTasks);
+    required RemoteTaskDataSource remoteDataSource,
+    required LocalTaskDataSource localDataSource,
+  })  : _remoteDataSource = remoteDataSource,
+        _localDataSource = localDataSource {
+    _initEngine();
   }
 
   // In-flight guard against rapid re-entrant toggles (DRY core primitive)
   final _guard = MutationGuard<String>();
 
   // Private Reactive Graph with structural sharing
-  late final StreamSignal<List<Task>> _cloudStreamSignal;
+  late final StreamSignal<List<Task>> _localStreamSignal;
   final _optimisticPatches = signal<IMap<String, bool>>(IMap());
   final _optimisticDeletions = signal<ISet<String>>(ISet());
   final _hasSyncError = signal<bool>(false);
   late final Computed<List<Task>> _computedTasks;
+  late final StreamSubscription<List<Task>> _remoteSyncSubscription;
 
-  void _initEngine(List<Task> initialTasks) {
-    _cloudStreamSignal = streamSignal(
-      () => _dataSource.taskStream,
-      options: AsyncSignalOptions<List<Task>>(initialValue: initialTasks),
+  void _initEngine() {
+    // 1. Primary Ingress: Listen to the Local Database (Frame 0 Boot)
+    _localStreamSignal = streamSignal(
+      () => _localDataSource.taskStream,
     );
 
+    // 2. Background Sync: Listen to Remote Cloud and pipe into Local DB
+    _remoteSyncSubscription = _remoteDataSource.taskStream.listen((remoteTasks) {
+      _localDataSource.syncRemoteData(remoteTasks);
+    });
+
+    // 3. Unified Projection: Merge Local Stream + In-flight Patches + In-flight Deletions
     _computedTasks = computed(() {
-      final baseTasks = _cloudStreamSignal.value.value ?? const [];
+      final localTasks = _localStreamSignal.value.value ?? const [];
       final overrides = _optimisticPatches.value;
       final deletions = _optimisticDeletions.value;
 
-      if (overrides.isEmpty && deletions.isEmpty) return baseTasks;
+      if (overrides.isEmpty && deletions.isEmpty) return localTasks;
 
-      // Single-pass reconciliation loop for O(N) memory efficiency
-      return baseTasks.where((t) => !deletions.contains(t.id)).map((task) {
+      return localTasks.where((t) => !deletions.contains(t.id)).map((task) {
         final patch = overrides[task.id];
         return patch != null
             ? (
@@ -66,23 +75,29 @@ class TaskRepository implements ITaskRepository {
   @override
   ReadonlySignal<bool> get isBusy => _guard.busySignal;
 
-  /// OPTIMISTIC MUTATION: Updates state across all screens in 0ms, synchronizes with cloud in background.
+  /// DUAL-TRACK MUTATION: Updates Local DB instantly, synchronizes with Cloud in background.
   @override
   Future<void> toggleTask(String id, bool currentStatus) async {
     final newStatus = !currentStatus;
 
     await (() async {
+      // Step A: Update memory patch (0ms track)
       _optimisticPatches.value = _optimisticPatches.value.add(id, newStatus);
 
       try {
-        await _dataSource.updateTask(id, newStatus);
-        // Reconcile atomically
+        // Step B: Update Local Persistence
+        await _localDataSource.updateTask(id, newStatus);
+
+        // Step C: Update Remote Cloud
+        await _remoteDataSource.updateTask(id, newStatus);
+
+        // Reconcile atomically on success
         batch(() {
           _hasSyncError.value = false;
           _optimisticPatches.value = _optimisticPatches.value.remove(id);
         });
       } catch (error, stackTrace) {
-        // Rollback atomically
+        // Rollback on failure
         batch(() {
           _optimisticPatches.value = _optimisticPatches.value.remove(id);
           _hasSyncError.value = true;
@@ -95,21 +110,27 @@ class TaskRepository implements ITaskRepository {
     }).guardedBy(_guard, id);
   }
 
-  /// OPTIMISTIC MUTATION: Hides item instantly, synchronizes with cloud in background.
+  /// DUAL-TRACK MUTATION: Hides item locally, deletes remotely in background.
   @override
   Future<void> deleteTask(String id) async {
     await (() async {
+      // Step A: Update memory deletion set (0ms track)
       _optimisticDeletions.value = _optimisticDeletions.value.add(id);
 
       try {
-        await _dataSource.deleteTask(id);
-        // Reconcile atomically
+        // Step B: Update Local Persistence
+        await _localDataSource.deleteTask(id);
+
+        // Step C: Update Remote Cloud
+        await _remoteDataSource.deleteTask(id);
+
+        // Reconcile atomically on success
         batch(() {
           _hasSyncError.value = false;
           _optimisticDeletions.value = _optimisticDeletions.value.remove(id);
         });
       } catch (error, stackTrace) {
-        // Rollback atomically
+        // Rollback on failure (item reappears)
         batch(() {
           _optimisticDeletions.value = _optimisticDeletions.value.remove(id);
           _hasSyncError.value = true;
@@ -124,8 +145,9 @@ class TaskRepository implements ITaskRepository {
 
   @override
   void dispose() {
+    _remoteSyncSubscription.cancel();
     _guard.clear();
-    _cloudStreamSignal.dispose();
+    _localStreamSignal.dispose();
     _optimisticPatches.dispose();
     _optimisticDeletions.dispose();
     _hasSyncError.dispose();

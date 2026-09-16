@@ -3,8 +3,8 @@ import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import '../domain/task_record.dart';
 import 'task_data_source.dart';
 
-/// Realized Tier 1 Mock Datastore handling local memory state and simulation latencies.
-class MockTaskDataSource implements TaskDataSource {
+/// Realized Tier 1 Mock Remote Datastore handling cloud state simulation.
+class MockTaskDataSource implements RemoteTaskDataSource {
   final _controller = StreamController<List<Task>>.broadcast();
   final List<Task> _currentTasks;
 
